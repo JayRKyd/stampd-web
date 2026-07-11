@@ -25,7 +25,7 @@ export default function Merchants() {
       <MarketingNav active="merchants" />
 
       {/* ── Hero ── */}
-      <section className="max-w-6xl mx-auto px-5 pt-16 pb-20 lg:pt-24 grid lg:grid-cols-2 gap-14 items-center">
+      <section className="w-[80%] max-w-[1600px] mx-auto pt-16 pb-20 lg:pt-24 grid lg:grid-cols-2 gap-14 items-center">
         <div>
           <p className="text-[13px] font-bold tracking-widest text-[#00605A] mb-4">FOR MERCHANTS & PROS</p>
           <h1 className="text-[40px] lg:text-[54px] font-extrabold tracking-[-0.03em] leading-[1.05]">
@@ -74,7 +74,7 @@ export default function Merchants() {
 
       {/* ── The counter flow ── */}
       <section className="bg-white border-y border-black/5">
-        <div className="max-w-6xl mx-auto px-5 py-20 lg:py-28 grid lg:grid-cols-2 gap-16 items-center">
+        <div className="w-[80%] max-w-[1600px] mx-auto py-20 lg:py-28 grid lg:grid-cols-2 gap-16 items-center">
           <div>
             <p className="text-[13px] font-extrabold tracking-[0.18em] text-[#00605A] mb-4">THE COUNTER FLOW</p>
             <h2 className="text-[30px] lg:text-[38px] font-extrabold tracking-[-0.03em] leading-tight mb-5">
@@ -102,7 +102,7 @@ export default function Merchants() {
       </section>
 
       {/* ── Know your regulars ── */}
-      <section className="max-w-6xl mx-auto px-5 py-20 lg:py-28 grid lg:grid-cols-2 gap-16 items-center">
+      <section className="w-[80%] max-w-[1600px] mx-auto py-20 lg:py-28 grid lg:grid-cols-2 gap-16 items-center">
         <div className="flex justify-center order-last lg:order-first" aria-hidden>
           <MiniDashboard className="-rotate-1" />
         </div>
@@ -123,7 +123,7 @@ export default function Merchants() {
       </section>
 
       {/* ── Getting started ── */}
-      <section className="max-w-6xl mx-auto px-5 py-20">
+      <section className="w-[80%] max-w-[1600px] mx-auto py-20">
         <h2 className="text-[32px] font-extrabold tracking-tight text-center mb-12">Live in a day</h2>
         <div className="grid sm:grid-cols-3 gap-10 max-w-4xl mx-auto">
           {STEPS.map(({ num, title, desc }) => (
@@ -137,7 +137,7 @@ export default function Merchants() {
       </section>
 
       {/* ── What's included + counter resilience ── */}
-      <section className="max-w-6xl mx-auto px-5 pb-20 grid lg:grid-cols-2 gap-6">
+      <section className="w-[80%] max-w-[1600px] mx-auto pb-20 grid lg:grid-cols-2 gap-6">
         <div className="rounded-3xl bg-white border border-black/5 p-8 lg:p-10">
           <h3 className="text-[20px] font-extrabold tracking-tight mb-5">Everything's included</h3>
           <ul className="space-y-3">
@@ -167,7 +167,7 @@ export default function Merchants() {
 
       {/* ── Final CTA ── */}
       <section className="bg-[#00605A]">
-        <div className="max-w-6xl mx-auto px-5 py-16 text-center">
+        <div className="w-[80%] max-w-[1600px] mx-auto py-16 text-center">
           <h2 className="text-[30px] font-extrabold tracking-tight text-white mb-3">
             Your regulars are out there.
           </h2>

@@ -10,7 +10,7 @@ import { whatsappHref, contactHref } from '@/lib/support'
 export function MarketingNav({ active }: { active?: 'home' | 'merchants' }) {
   return (
     <nav className="sticky top-0 z-40 backdrop-blur-md bg-[#F7F2E8]/90 border-b border-black/5">
-      <div className="max-w-6xl mx-auto px-5 h-16 flex items-center gap-6">
+      <div className="w-[80%] max-w-[1600px] mx-auto h-16 flex items-center gap-6">
         <Link to="/" className="text-[22px] font-extrabold tracking-tight text-[#1A2B2A]">
           Stampd
         </Link>
@@ -46,7 +46,7 @@ export function MarketingFooter() {
   const contact = whatsappHref || contactHref
   return (
     <footer className="border-t border-black/5 bg-[#F7F2E8]">
-      <div className="max-w-6xl mx-auto px-5 py-10 flex flex-col sm:flex-row items-center gap-4">
+      <div className="w-[80%] max-w-[1600px] mx-auto py-10 flex flex-col sm:flex-row items-center gap-4">
         <p className="text-[18px] font-extrabold tracking-tight text-[#1A2B2A]">Stampd</p>
         <div className="flex-1" />
         <Link to="/merchants" className="text-[13px] font-medium text-[#74807E] hover:text-[#1A2B2A] transition-colors">

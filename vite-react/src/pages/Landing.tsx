@@ -52,7 +52,7 @@ export default function Landing() {
       <MarketingNav active="home" />
 
       {/* ── Hero ── */}
-      <section className="max-w-6xl mx-auto px-5 pt-16 pb-20 lg:pt-24 lg:pb-28 grid lg:grid-cols-2 gap-14 items-center">
+      <section className="w-[80%] max-w-[1600px] mx-auto pt-16 pb-20 lg:pt-24 lg:pb-28 grid lg:grid-cols-2 gap-14 items-center">
         <div>
           <h1 className="text-[44px] lg:text-[60px] font-extrabold tracking-[-0.03em] leading-[1.02]">
             Full price?
@@ -94,7 +94,7 @@ export default function Landing() {
 
       {/* ── Statement ── */}
       <section className="bg-white border-y border-black/5">
-        <div className="max-w-5xl mx-auto px-5 py-20 lg:py-28">
+        <div className="w-[80%] max-w-[1400px] mx-auto py-20 lg:py-28">
           <p className="text-[34px] lg:text-[56px] font-extrabold tracking-[-0.035em] leading-[1.08]">
             Paper punch cards get washed,
             <br className="hidden sm:block" />
@@ -108,7 +108,7 @@ export default function Landing() {
       </section>
 
       {/* ── One PIN ── */}
-      <section id="how" className="max-w-6xl mx-auto px-5 py-20 lg:py-28 grid lg:grid-cols-2 gap-16 items-center">
+      <section id="how" className="w-[80%] max-w-[1600px] mx-auto py-20 lg:py-28 grid lg:grid-cols-2 gap-16 items-center">
         <div>
           <p className="text-[13px] font-extrabold tracking-[0.18em] text-[#00605A] mb-4">01 · YOUR PIN</p>
           <h2 className="text-[30px] lg:text-[38px] font-extrabold tracking-[-0.03em] leading-tight mb-5">
@@ -134,7 +134,7 @@ export default function Landing() {
 
       {/* ── Rewards ── */}
       <section className="bg-white border-y border-black/5">
-        <div className="max-w-6xl mx-auto px-5 py-20 lg:py-28 grid lg:grid-cols-2 gap-16 items-center">
+        <div className="w-[80%] max-w-[1600px] mx-auto py-20 lg:py-28 grid lg:grid-cols-2 gap-16 items-center">
           <div className="relative flex justify-center py-6 order-last lg:order-first" aria-hidden>
             <div className="space-y-3">
               <MiniNotification
@@ -167,7 +167,7 @@ export default function Landing() {
       </section>
 
       {/* ── Pros ── */}
-      <section className="max-w-6xl mx-auto px-5 py-20 lg:py-24">
+      <section className="w-[80%] max-w-[1600px] mx-auto py-20 lg:py-24">
         <div className="rounded-[32px] bg-[#1e3a5f] text-white px-8 py-12 lg:px-14 lg:py-16 grid lg:grid-cols-2 gap-12 items-center overflow-hidden">
           <div>
             <p className="text-[13px] font-extrabold tracking-[0.18em] text-white/50 mb-4">03 · THE PROS</p>
@@ -193,7 +193,7 @@ export default function Landing() {
       </section>
 
       {/* ── FAQ ── */}
-      <section className="max-w-3xl mx-auto px-5 py-20 lg:py-24">
+      <section className="w-[80%] max-w-[900px] mx-auto py-20 lg:py-24">
         <p className="text-[13px] font-extrabold tracking-[0.18em] text-[#00605A] mb-4 text-center">BEFORE YOU ASK</p>
         <h2 className="text-[30px] font-extrabold tracking-[-0.03em] text-center mb-10">Straight answers</h2>
         <div className="space-y-3">
@@ -211,7 +211,7 @@ export default function Landing() {
 
       {/* ── Closing CTA ── */}
       <section className="bg-white border-t border-black/5">
-        <div className="max-w-4xl mx-auto px-5 py-20 lg:py-28 text-center">
+        <div className="w-[80%] max-w-[1100px] mx-auto py-20 lg:py-28 text-center">
           <h2 className="text-[36px] lg:text-[52px] font-extrabold tracking-[-0.035em] leading-[1.05]">
             Your favourite spots
             <br />
@@ -232,7 +232,7 @@ export default function Landing() {
       <div className="border-t border-black/5">
         <Link
           to="/merchants"
-          className="max-w-6xl mx-auto px-5 py-5 flex items-center justify-center gap-2 text-[13px] font-semibold text-[#74807E] hover:text-[#00605A] transition-colors"
+          className="w-[80%] max-w-[1600px] mx-auto py-5 flex items-center justify-center gap-2 text-[13px] font-semibold text-[#74807E] hover:text-[#00605A] transition-colors"
         >
           Own a spot? Loyalty that runs itself <ArrowRight size={14} />
         </Link>
