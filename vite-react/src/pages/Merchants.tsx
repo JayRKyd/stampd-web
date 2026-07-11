@@ -27,13 +27,13 @@ export default function Merchants() {
       {/* ── Hero ── */}
       <section className="w-[80%] max-w-[1600px] mx-auto pt-16 pb-20 lg:pt-24 grid lg:grid-cols-2 gap-14 items-center">
         <div>
-          <p className="text-[13px] font-bold tracking-widest text-[#00605A] mb-4">FOR MERCHANTS & PROS</p>
-          <h1 className="text-[40px] lg:text-[54px] font-extrabold tracking-[-0.03em] leading-[1.05]">
+          <p className="text-[13px] md:text-[14px] font-bold tracking-widest text-[#00605A] mb-4">FOR MERCHANTS & PROS</p>
+          <h1 className="text-[40px] md:text-[58px] lg:text-[72px] xl:text-[80px] font-extrabold tracking-[-0.03em] leading-[1.05]">
             Loyalty that
             <br />
             runs itself.
           </h1>
-          <p className="mt-6 text-[17px] text-[#556570] leading-relaxed max-w-md">
+          <p className="mt-6 text-[17px] md:text-[19px] lg:text-[20px] text-[#556570] leading-relaxed max-w-md lg:max-w-lg">
             Paper punch cards get lost, forgotten, and forged. Stampd puts your
             loyalty card in your customers' pockets — and puts your regulars'
             names, habits, and next visit in front of you.
@@ -76,13 +76,13 @@ export default function Merchants() {
       <section className="bg-white border-y border-black/5">
         <div className="w-[80%] max-w-[1600px] mx-auto py-20 lg:py-28 grid lg:grid-cols-2 gap-16 items-center">
           <div>
-            <p className="text-[13px] font-extrabold tracking-[0.18em] text-[#00605A] mb-4">THE COUNTER FLOW</p>
-            <h2 className="text-[30px] lg:text-[38px] font-extrabold tracking-[-0.03em] leading-tight mb-5">
+            <p className="text-[13px] md:text-[14px] font-extrabold tracking-[0.18em] text-[#00605A] mb-4">THE COUNTER FLOW</p>
+            <h2 className="text-[30px] md:text-[38px] lg:text-[44px] xl:text-[48px] font-extrabold tracking-[-0.03em] leading-tight mb-5">
               They say six digits.
               <br />
               You type them. Done.
             </h2>
-            <p className="text-[15.5px] text-[#556570] leading-relaxed max-w-md">
+            <p className="text-[15.5px] lg:text-[17px] text-[#556570] leading-relaxed max-w-md lg:max-w-lg">
               No scanner, no hardware, no training beyond one sentence. It runs on
               whatever's already at your counter — a phone, a tablet, the till. First-time
               customers join automatically with their first stamp, and your staff's
@@ -107,13 +107,13 @@ export default function Merchants() {
           <MiniDashboard className="-rotate-1" />
         </div>
         <div>
-          <p className="text-[13px] font-extrabold tracking-[0.18em] text-[#00605A] mb-4">THE MORNING GLANCE</p>
-          <h2 className="text-[30px] lg:text-[38px] font-extrabold tracking-[-0.03em] leading-tight mb-5">
+          <p className="text-[13px] md:text-[14px] font-extrabold tracking-[0.18em] text-[#00605A] mb-4">THE MORNING GLANCE</p>
+          <h2 className="text-[30px] md:text-[38px] lg:text-[44px] xl:text-[48px] font-extrabold tracking-[-0.03em] leading-tight mb-5">
             Know your regulars
             <br />
             better than they do.
           </h2>
-          <p className="text-[15.5px] text-[#556570] leading-relaxed max-w-md">
+          <p className="text-[15.5px] lg:text-[17px] text-[#556570] leading-relaxed max-w-md lg:max-w-lg">
             Who's one stamp from a reward. Who hasn't been in since last month.
             Which day of the week actually pays your rent. The dashboard says it
             in plain words and absolute numbers — never "-100% vs prior" nonsense
@@ -124,7 +124,7 @@ export default function Merchants() {
 
       {/* ── Getting started ── */}
       <section className="w-[80%] max-w-[1600px] mx-auto py-20">
-        <h2 className="text-[32px] font-extrabold tracking-tight text-center mb-12">Live in a day</h2>
+        <h2 className="text-[32px] md:text-[40px] lg:text-[44px] font-extrabold tracking-tight text-center mb-12">Live in a day</h2>
         <div className="grid sm:grid-cols-3 gap-10 max-w-4xl mx-auto">
           {STEPS.map(({ num, title, desc }) => (
             <div key={num}>
@@ -168,10 +168,10 @@ export default function Merchants() {
       {/* ── Final CTA ── */}
       <section className="bg-[#00605A]">
         <div className="w-[80%] max-w-[1600px] mx-auto py-16 text-center">
-          <h2 className="text-[30px] font-extrabold tracking-tight text-white mb-3">
+          <h2 className="text-[30px] md:text-[38px] lg:text-[44px] font-extrabold tracking-tight text-white mb-3">
             Your regulars are out there.
           </h2>
-          <p className="text-[15px] text-white/75 max-w-lg mx-auto mb-8">
+          <p className="text-[15px] lg:text-[17px] text-white/75 max-w-lg mx-auto mb-8">
             Give them a reason to pick you every time. Set up your card tonight,
             stamp your first customer this week.
           </p>

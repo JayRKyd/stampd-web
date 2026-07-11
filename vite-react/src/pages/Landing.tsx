@@ -54,12 +54,12 @@ export default function Landing() {
       {/* ── Hero ── */}
       <section className="w-[80%] max-w-[1600px] mx-auto pt-16 pb-20 lg:pt-24 lg:pb-28 grid lg:grid-cols-2 gap-14 items-center">
         <div>
-          <h1 className="text-[44px] lg:text-[60px] font-extrabold tracking-[-0.03em] leading-[1.02]">
+          <h1 className="text-[44px] md:text-[64px] lg:text-[76px] xl:text-[88px] font-extrabold tracking-[-0.03em] leading-[1.02]">
             Full price?
             <br />
             <span className="text-[#c99a2e]">Every visit?</span>
           </h1>
-          <p className="mt-6 text-[17px] text-[#556570] leading-relaxed max-w-md">
+          <p className="mt-6 text-[17px] md:text-[19px] lg:text-[20px] text-[#556570] leading-relaxed max-w-md lg:max-w-lg">
             Stampd turns your loyalty into free stuff at the local spots you already
             love. One PIN. Every shop. No punch cards.
           </p>
@@ -95,13 +95,13 @@ export default function Landing() {
       {/* ── Statement ── */}
       <section className="bg-white border-y border-black/5">
         <div className="w-[80%] max-w-[1400px] mx-auto py-20 lg:py-28">
-          <p className="text-[34px] lg:text-[56px] font-extrabold tracking-[-0.035em] leading-[1.08]">
+          <p className="text-[34px] md:text-[48px] lg:text-[64px] xl:text-[72px] font-extrabold tracking-[-0.035em] leading-[1.08]">
             Paper punch cards get washed,
             <br className="hidden sm:block" />
             {' '}left in the truck, and{' '}
             <span className="text-[#c99a2e]">"lost"</span> by your cousin.
           </p>
-          <p className="mt-6 text-[17px] text-[#556570] max-w-lg leading-relaxed">
+          <p className="mt-6 text-[17px] lg:text-[19px] text-[#556570] max-w-lg leading-relaxed">
             Stampd keeps the count, so nobody else has to. Here's the whole system:
           </p>
         </div>
@@ -110,13 +110,13 @@ export default function Landing() {
       {/* ── One PIN ── */}
       <section id="how" className="w-[80%] max-w-[1600px] mx-auto py-20 lg:py-28 grid lg:grid-cols-2 gap-16 items-center">
         <div>
-          <p className="text-[13px] font-extrabold tracking-[0.18em] text-[#00605A] mb-4">01 · YOUR PIN</p>
-          <h2 className="text-[30px] lg:text-[38px] font-extrabold tracking-[-0.03em] leading-tight mb-5">
+          <p className="text-[13px] md:text-[14px] font-extrabold tracking-[0.18em] text-[#00605A] mb-4">01 · YOUR PIN</p>
+          <h2 className="text-[30px] md:text-[38px] lg:text-[44px] xl:text-[48px] font-extrabold tracking-[-0.03em] leading-tight mb-5">
             Six digits.
             <br />
             That's the whole system.
           </h2>
-          <p className="text-[15.5px] text-[#556570] leading-relaxed max-w-md">
+          <p className="text-[15.5px] lg:text-[17px] text-[#556570] leading-relaxed max-w-md lg:max-w-lg">
             Say your PIN when you pay, at the coffee spot, the deli truck, or your
             barber's chair. The cashier types it, your card fills itself. First
             time somewhere? That first stamp signs you up on the spot. No app
@@ -151,13 +151,13 @@ export default function Landing() {
             <MiniTicket className="absolute -bottom-10 -right-2 lg:right-6 rotate-6 hidden sm:block" />
           </div>
           <div>
-            <p className="text-[13px] font-extrabold tracking-[0.18em] text-[#00605A] mb-4">02 · THE PAYOFF</p>
-            <h2 className="text-[30px] lg:text-[38px] font-extrabold tracking-[-0.03em] leading-tight mb-5">
+            <p className="text-[13px] md:text-[14px] font-extrabold tracking-[0.18em] text-[#00605A] mb-4">02 · THE PAYOFF</p>
+            <h2 className="text-[30px] md:text-[38px] lg:text-[44px] xl:text-[48px] font-extrabold tracking-[-0.03em] leading-tight mb-5">
               You don't chase the reward.
               <br />
               It chases you.
             </h2>
-            <p className="text-[15.5px] text-[#556570] leading-relaxed max-w-md">
+            <p className="text-[15.5px] lg:text-[17px] text-[#556570] leading-relaxed max-w-md lg:max-w-lg">
               Hit the last stamp and the voucher's on your phone before your
               change hits your hand. Show it at the counter, tear the ticket,
               enjoy. Nothing to print, nothing to remember, nothing to argue about.
@@ -170,13 +170,13 @@ export default function Landing() {
       <section className="w-[80%] max-w-[1600px] mx-auto py-20 lg:py-24">
         <div className="rounded-[32px] bg-[#1e3a5f] text-white px-8 py-12 lg:px-14 lg:py-16 grid lg:grid-cols-2 gap-12 items-center overflow-hidden">
           <div>
-            <p className="text-[13px] font-extrabold tracking-[0.18em] text-white/50 mb-4">03 · THE PROS</p>
-            <h2 className="text-[28px] lg:text-[36px] font-extrabold tracking-[-0.03em] leading-tight mb-5">
+            <p className="text-[13px] md:text-[14px] font-extrabold tracking-[0.18em] text-white/50 mb-4">03 · THE PROS</p>
+            <h2 className="text-[28px] md:text-[36px] lg:text-[42px] xl:text-[46px] font-extrabold tracking-[-0.03em] leading-tight mb-5">
               The card follows the pro,
               <br />
               not the address.
             </h2>
-            <p className="text-[15px] text-white/70 leading-relaxed max-w-md">
+            <p className="text-[15px] lg:text-[17px] text-white/70 leading-relaxed max-w-md lg:max-w-lg">
               When Marcus moves chairs, his card, and every regular on it, moves
               with him. Same for every braider, nail tech, and trainer on Stampd.
               Find yours under the <span className="font-bold text-white">Pros</span> tab.
@@ -194,8 +194,8 @@ export default function Landing() {
 
       {/* ── FAQ ── */}
       <section className="w-[80%] max-w-[900px] mx-auto py-20 lg:py-24">
-        <p className="text-[13px] font-extrabold tracking-[0.18em] text-[#00605A] mb-4 text-center">BEFORE YOU ASK</p>
-        <h2 className="text-[30px] font-extrabold tracking-[-0.03em] text-center mb-10">Straight answers</h2>
+        <p className="text-[13px] md:text-[14px] font-extrabold tracking-[0.18em] text-[#00605A] mb-4 text-center">BEFORE YOU ASK</p>
+        <h2 className="text-[30px] md:text-[38px] lg:text-[42px] font-extrabold tracking-[-0.03em] text-center mb-10">Straight answers</h2>
         <div className="space-y-3">
           {FAQS.map(({ q, a }) => (
             <details key={q} className="group bg-white rounded-2xl border border-black/5 px-6 py-4 open:pb-5">
@@ -212,12 +212,12 @@ export default function Landing() {
       {/* ── Closing CTA ── */}
       <section className="bg-white border-t border-black/5">
         <div className="w-[80%] max-w-[1100px] mx-auto py-20 lg:py-28 text-center">
-          <h2 className="text-[36px] lg:text-[52px] font-extrabold tracking-[-0.035em] leading-[1.05]">
+          <h2 className="text-[36px] md:text-[48px] lg:text-[64px] xl:text-[72px] font-extrabold tracking-[-0.035em] leading-[1.05]">
             Your favourite spots
             <br />
             <span className="text-[#c99a2e]">owe you one.</span>
           </h2>
-          <p className="mt-5 text-[16px] text-[#556570] max-w-md mx-auto">
+          <p className="mt-5 text-[16px] lg:text-[18px] text-[#556570] max-w-md lg:max-w-lg mx-auto">
             Download Stampd, grab your PIN, and start collecting at the places
             you were going anyway.
           </p>
