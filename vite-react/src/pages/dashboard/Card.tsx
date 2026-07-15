@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
-import { Gift, Upload, X, Minus, Plus } from 'lucide-react'
+import { Gift, Upload, X, Plus } from 'lucide-react'
 import { getStampIcon, STAMP_ICON_GROUPS } from '@/lib/stampIcons'
 import { shade, isLightColor } from '@/lib/cardPreview'
 import { resizeImage } from '@/lib/resizeImage'
@@ -17,13 +17,15 @@ const PRESET_COLORS = [
   { name: 'Espresso', value: '#3e2723' },
 ]
 
+type Tier = { stamps: string; reward: string }
+
 export default function Card() {
   const [merchantId, setMerchantId] = useState('')
   const [cardId, setCardId] = useState('')
   const [businessName, setBusinessName] = useState('Your Business')
 
-  const [stampsRequired, setStampsRequired] = useState(10)
-  const [rewardTitle, setRewardTitle] = useState('Free Coffee')
+  const [tiers, setTiers] = useState<Tier[]>([{ stamps: '10', reward: 'Free Coffee' }])
+  const [tierError, setTierError] = useState('')
   const [rewardDescription, setRewardDescription] = useState('Get a free coffee of any size on us!')
   const [cardColor, setCardColor] = useState('#00605a')
   const [stampIcon, setStampIcon] = useState('star')
@@ -61,11 +63,23 @@ export default function Card() {
 
       if (card) {
         setCardId(card.id)
-        setStampsRequired(card.stamp_count_required ?? 10)
-        setRewardTitle(card.reward_title ?? 'Free Coffee')
         setRewardDescription(card.reward_description ?? '')
         if (card.card_color) setCardColor(card.card_color)
         if (card.stamp_icon) setStampIcon(card.stamp_icon)
+
+        // Tiers are the source of truth; the flat card fields only mirror
+        // the final tier. Fall back to them for legacy cards with no tiers.
+        const { data: tierRows } = await supabase
+          .from('reward_tiers')
+          .select('stamp_threshold, reward_title')
+          .eq('loyalty_card_id', card.id)
+          .order('stamp_threshold', { ascending: true })
+
+        if (tierRows && tierRows.length > 0) {
+          setTiers(tierRows.map(t => ({ stamps: String(t.stamp_threshold), reward: t.reward_title })))
+        } else {
+          setTiers([{ stamps: String(card.stamp_count_required ?? 10), reward: card.reward_title ?? '' }])
+        }
       }
 
       setPageLoading(false)
@@ -73,8 +87,31 @@ export default function Card() {
     load()
   }, [])
 
+  const updateTier = (index: number, field: keyof Tier, value: string) => {
+    setTiers(prev => prev.map((t, i) => i === index ? { ...t, [field]: value } : t))
+    setTierError('')
+  }
+
+  const addTier = () => setTiers(prev => [...prev, { stamps: '', reward: '' }])
+
+  const removeTier = (index: number) => {
+    if (tiers.length === 1) return
+    setTiers(prev => prev.filter((_, i) => i !== index))
+    setTierError('')
+  }
+
   const handleSave = async () => {
     if (!merchantId) return
+
+    const validTiers = tiers.filter(t => t.stamps && parseInt(t.stamps) > 0 && t.reward.trim())
+    if (!validTiers.length) { setTierError('Add at least one reward tier'); return }
+    const sorted = [...validTiers].sort((a, b) => parseInt(a.stamps) - parseInt(b.stamps))
+    const hasDescending = sorted.some((t, i) =>
+      i > 0 && parseInt(t.stamps) <= parseInt(sorted[i - 1].stamps)
+    )
+    if (hasDescending) { setTierError('Each tier needs more stamps than the one before it'); return }
+
+    setTierError('')
     setSaving(true)
     const supabase = createClient()
 
@@ -99,10 +136,13 @@ export default function Card() {
         setLogoFile(null)
       }
 
+      // Flat card columns mirror the FINAL tier (full card size + top reward);
+      // the stamp trigger awards every intermediate tier from reward_tiers.
+      const finalTier = sorted[sorted.length - 1]
       const cardData = {
         merchant_id: merchantId,
-        stamp_count_required: stampsRequired,
-        reward_title: rewardTitle,
+        stamp_count_required: parseInt(finalTier.stamps),
+        reward_title: finalTier.reward.trim(),
         reward_description: rewardDescription || null,
         card_color: cardColor,
         stamp_icon: stampIcon,
@@ -121,29 +161,22 @@ export default function Card() {
         }
       }
 
-      // Keep reward_tiers aligned with flat card fields so mobile tier views stay in sync
+      // Replace the tier set wholesale — same strategy as onboarding.
+      // (rewards.reward_tier_id is ON DELETE SET NULL, so earned rewards survive.)
       if (activeCardId) {
-        const { data: tiers } = await supabase
-          .from('reward_tiers')
-          .select('id, stamp_threshold, sort_order')
-          .eq('loyalty_card_id', activeCardId)
-          .order('stamp_threshold', { ascending: true })
+        const { error: delError } = await supabase
+          .from('reward_tiers').delete().eq('loyalty_card_id', activeCardId)
+        if (delError) { setTierError('Could not save tiers — try again.'); return }
 
-        if (tiers && tiers.length > 0) {
-          // Update the highest tier to match the flat card goal
-          const finalTier = tiers[tiers.length - 1]
-          await supabase.from('reward_tiers').update({
-            stamp_threshold: stampsRequired,
-            reward_title: rewardTitle,
-          }).eq('id', finalTier.id)
-        } else {
-          await supabase.from('reward_tiers').insert({
+        const { error: insError } = await supabase.from('reward_tiers').insert(
+          sorted.map((t, i) => ({
             loyalty_card_id: activeCardId,
-            stamp_threshold: stampsRequired,
-            reward_title: rewardTitle,
-            sort_order: 0,
-          })
-        }
+            stamp_threshold: parseInt(t.stamps),
+            reward_title: t.reward.trim(),
+            sort_order: i + 1,
+          }))
+        )
+        if (insError) { setTierError('Could not save tiers — try again.'); return }
       }
 
       setSaved(true)
@@ -171,6 +204,19 @@ export default function Card() {
       </div>
     )
   }
+
+  // Card size + headline reward derive from the tiers: the highest threshold
+  // is the full card, the highest complete tier is the reward shown on the face
+  const tiersWithStamps = tiers.filter(t => t.stamps && parseInt(t.stamps) > 0)
+  const stampsRequired = tiersWithStamps.length
+    ? Math.max(...tiersWithStamps.map(t => parseInt(t.stamps)))
+    : 10
+  const sortedValidTiers = tiers
+    .filter(t => t.stamps && parseInt(t.stamps) > 0 && t.reward.trim())
+    .sort((a, b) => parseInt(a.stamps) - parseInt(b.stamps))
+  const rewardTitle = sortedValidTiers.length
+    ? sortedValidTiers[sortedValidTiers.length - 1].reward.trim()
+    : ''
 
   // Preview state, mirroring mobile StampCard: adaptive text on the brand
   // color, half-filled stamps, gift in the last slot
@@ -262,6 +308,19 @@ export default function Card() {
               Shown with {previewFilled} of {stampsRequired} stamps earned
             </p>
           </div>
+
+          {/* Milestones live in the app's card detail, not on the card face */}
+          {sortedValidTiers.length > 1 && (
+            <div className="mt-3 px-1 space-y-1.5">
+              <p className="text-[10px] font-semibold text-gray-400 uppercase tracking-wider">Milestones</p>
+              {sortedValidTiers.map((t, i) => (
+                <div key={i} className="flex items-center justify-between text-[12px]">
+                  <span className="text-gray-500">{t.stamps} stamps</span>
+                  <span className="font-semibold text-gray-700 truncate max-w-[60%]">{t.reward}</span>
+                </div>
+              ))}
+            </div>
+          )}
         </div>
 
         {/* Settings */}
@@ -384,54 +443,68 @@ export default function Card() {
               )}
             </div>
 
-            {/* Stamps required */}
+            {/* Reward tiers */}
             <div>
-              <label className="block text-[12px] font-medium text-gray-600 mb-1.5">
-                Stamps Required
+              <label className="block text-[12px] font-medium text-gray-600 mb-1">
+                Reward Tiers
               </label>
-              <div className="flex items-center gap-2">
-                <button
-                  onClick={() => setStampsRequired(v => Math.max(1, v - 1))}
-                  disabled={stampsRequired <= 1}
-                  className="w-10 h-10 rounded-lg border border-gray-200 flex items-center justify-center text-gray-600 hover:bg-gray-50 disabled:opacity-30 transition-colors"
-                  aria-label="Fewer stamps"
-                >
-                  <Minus size={15} />
-                </button>
-                <input
-                  type="number"
-                  min={1}
-                  max={50}
-                  value={stampsRequired}
-                  onChange={(e) => setStampsRequired(Math.min(50, Math.max(1, Number(e.target.value))))}
-                  className="w-20 text-center px-3 py-2 rounded-lg border border-gray-200 bg-gray-50 text-[14px] font-semibold focus:outline-none focus:border-brand-500 focus:ring-1 focus:ring-brand-500/20 transition-all"
-                />
-                <button
-                  onClick={() => setStampsRequired(v => Math.min(50, v + 1))}
-                  disabled={stampsRequired >= 50}
-                  className="w-10 h-10 rounded-lg border border-gray-200 flex items-center justify-center text-gray-600 hover:bg-gray-50 disabled:opacity-30 transition-colors"
-                  aria-label="More stamps"
-                >
-                  <Plus size={15} />
-                </button>
-                <span className="text-[12px] text-gray-400 ml-1">
-                  {stampsRequired <= 6 ? 'Quick to earn' : stampsRequired <= 12 ? 'Typical' : 'Long haul'}
-                </span>
+              <p className="text-[11px] text-gray-400 mb-2">
+                One tier = simple program. Add more for milestones (e.g. 5 = 25% off, 10 = free item).
+                Your highest tier sets the full card size.
+              </p>
+              <div className="space-y-2">
+                {tiers.map((tier, i) => (
+                  <div
+                    key={i}
+                    className="flex items-center gap-2 bg-gray-50 border border-gray-200 rounded-lg px-2.5 py-2"
+                  >
+                    <div className="w-5 h-5 rounded-full bg-brand-500 text-white text-[10px] font-bold flex items-center justify-center shrink-0">
+                      {i + 1}
+                    </div>
+                    <input
+                      type="number"
+                      min={1}
+                      max={50}
+                      value={tier.stamps}
+                      onChange={(e) => {
+                        const val = e.target.value
+                        if (val === '' || (parseInt(val) >= 1 && parseInt(val) <= 50)) {
+                          updateTier(i, 'stamps', val)
+                        }
+                      }}
+                      placeholder="Stamps"
+                      className="w-[70px] bg-white border border-gray-200 rounded-lg px-2 py-1.5 text-[13px] text-gray-900 focus:outline-none focus:border-brand-500 focus:ring-1 focus:ring-brand-500/20 shrink-0"
+                    />
+                    <input
+                      type="text"
+                      value={tier.reward}
+                      onChange={(e) => updateTier(i, 'reward', e.target.value)}
+                      placeholder="Reward (e.g. Free Coffee, 25% off)"
+                      className="flex-1 min-w-0 bg-white border border-gray-200 rounded-lg px-2 py-1.5 text-[13px] text-gray-900 focus:outline-none focus:border-brand-500 focus:ring-1 focus:ring-brand-500/20"
+                    />
+                    {tiers.length > 1 && (
+                      <button
+                        onClick={() => removeTier(i)}
+                        className="text-gray-400 hover:text-red-500 transition-colors p-1"
+                        aria-label="Remove tier"
+                      >
+                        <X size={13} />
+                      </button>
+                    )}
+                  </div>
+                ))}
               </div>
-            </div>
-
-            {/* Reward title */}
-            <div>
-              <label className="block text-[12px] font-medium text-gray-600 mb-1.5">
-                Reward Title
-              </label>
-              <input
-                type="text"
-                value={rewardTitle}
-                onChange={(e) => setRewardTitle(e.target.value)}
-                placeholder="Free Coffee"
-                className="w-full px-3 py-2.5 rounded-lg border border-gray-200 bg-gray-50 text-[13px] focus:outline-none focus:border-brand-500 focus:ring-1 focus:ring-brand-500/20 transition-all placeholder:text-gray-300"
-              />
+              <button
+                onClick={addTier}
+                className="flex items-center gap-1 text-[12px] text-brand-500 font-semibold mt-2 hover:opacity-70 transition-opacity"
+              >
+                <Plus size={13} /> Add another tier
+              </button>
+              {tierError && (
+                <p className="text-[12px] text-red-600 bg-red-50 border border-red-200 rounded-lg px-3 py-2.5 mt-2">
+                  {tierError}
+                </p>
+              )}
             </div>
 
             {/* Reward description */}
