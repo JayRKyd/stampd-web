@@ -44,7 +44,7 @@ export default function Register() {
       password,
       options: {
         data: { role: 'merchant', business_name: businessName.trim() },
-        emailRedirectTo: `${window.location.origin}/login`,
+        emailRedirectTo: `${window.location.origin}/confirmed`,
       },
     })
 

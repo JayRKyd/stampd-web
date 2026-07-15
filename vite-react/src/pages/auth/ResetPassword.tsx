@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { useNavigate, Link } from 'react-router-dom'
-import { Eye, EyeOff, CheckCircle2 } from 'lucide-react'
+import { Eye, EyeOff, CheckCircle2, Smartphone } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
 
 export default function ResetPassword() {
@@ -9,7 +9,8 @@ export default function ResetPassword() {
   const [showPassword, setShowPassword] = useState(false)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
-  const [done, setDone] = useState(false)
+  // 'merchant' continues to the dashboard; consumers are sent back to the app
+  const [done, setDone] = useState<false | 'merchant' | 'consumer'>(false)
   const [hasSession, setHasSession] = useState<boolean | null>(null)
   const navigate = useNavigate()
 
@@ -33,11 +34,21 @@ export default function ResetPassword() {
     setLoading(true)
     setError('')
     const supabase = createClient()
-    const { error } = await supabase.auth.updateUser({ password })
+    const { data, error } = await supabase.auth.updateUser({ password })
     setLoading(false)
     if (error) { setError(error.message); return }
-    setDone(true)
-    setTimeout(() => navigate('/dashboard'), 1500)
+
+    // Mobile users reset here too (phones have no page to catch the email
+    // link) — but only merchants belong in this dashboard. Consumers get
+    // sent back to the app, and their recovery session is closed so it
+    // can't wander into merchant onboarding.
+    if (data.user?.user_metadata?.role === 'merchant') {
+      setDone('merchant')
+      setTimeout(() => navigate('/dashboard'), 1500)
+    } else {
+      setDone('consumer')
+      supabase.auth.signOut()
+    }
   }
 
   return (
@@ -53,7 +64,19 @@ export default function ResetPassword() {
               <CheckCircle2 size={24} className="text-green-600" />
             </div>
             <h1 className="text-[24px] font-bold text-gray-900 tracking-[-0.02em] mb-2">Password updated</h1>
-            <p className="text-[14px] text-gray-600">Redirecting you to your dashboard…</p>
+            {done === 'merchant' ? (
+              <p className="text-[14px] text-gray-600">Redirecting you to your dashboard…</p>
+            ) : (
+              <>
+                <p className="text-[14px] text-gray-600 mb-5">
+                  You're all set. Open the Stampd app on your phone and sign in with your new password.
+                </p>
+                <div className="flex items-center gap-2.5 px-4 py-3 rounded-lg bg-gray-50 border border-gray-200">
+                  <Smartphone size={18} className="text-gray-500 shrink-0" />
+                  <p className="text-[13px] text-gray-600">You can close this page.</p>
+                </div>
+              </>
+            )}
           </div>
         ) : hasSession === false ? (
           <div>

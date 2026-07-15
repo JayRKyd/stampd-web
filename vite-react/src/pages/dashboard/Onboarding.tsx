@@ -221,6 +221,7 @@ export default function Onboarding() {
 
   // ── Loading state ──
   const [pageLoading, setPageLoading] = useState(true)
+  const [wrongDoor, setWrongDoor] = useState(false)
   const [merchant, setMerchant] = useState<Merchant | null>(null)
   const [existingCard, setExistingCard] = useState<LoyaltyCard | null>(null)
   const [hasCard, setHasCard] = useState(false)
@@ -283,7 +284,15 @@ export default function Onboarding() {
 
       // Self-heal: if the merchant row is missing (e.g. trigger didn't fire),
       // create one so the user isn't stuck bouncing between routes.
+      // ONLY for accounts that signed up as merchants — consumer accounts
+      // from the mobile app can land here with a web session (e.g. after a
+      // password reset) and must never be silently turned into merchants.
       if (!data) {
+        if (user.user_metadata?.role !== 'merchant') {
+          setWrongDoor(true)
+          setPageLoading(false)
+          return
+        }
         const businessName =
           (user.user_metadata?.business_name as string | undefined)?.trim() || 'My Business'
         const { data: created } = await supabase
@@ -510,6 +519,43 @@ export default function Onboarding() {
     } finally {
       setLoading(false)
     }
+  }
+
+  // Consumer account signed into the merchant dashboard — point them back
+  // to the app instead of onboarding them as a business.
+  if (wrongDoor) {
+    return (
+      <div className="animate-enter w-full max-w-[480px]">
+        <div className="bg-white border border-gray-200 rounded-2xl p-8">
+          <div className="w-12 h-12 rounded-xl bg-brand-50 flex items-center justify-center text-brand-600 mb-4">
+            <Smartphone size={22} strokeWidth={1.75} />
+          </div>
+          <h1 className="text-[20px] font-bold text-gray-900 mb-2">This dashboard is for businesses</h1>
+          <p className="text-[13px] text-gray-500 leading-relaxed mb-6">
+            Your account is a Stampd customer account. Open the Stampd app on your
+            phone to see your cards and rewards. If you want to run a loyalty
+            program for your business, you can create a merchant account.
+          </p>
+          <div className="flex flex-col gap-2">
+            <button
+              onClick={async () => {
+                await createClient().auth.signOut()
+                navigate('/')
+              }}
+              className="w-full py-3 rounded-xl bg-brand-500 text-white text-[13px] font-bold hover:bg-brand-600 transition-colors"
+            >
+              Sign out
+            </button>
+            <Link
+              to="/merchants"
+              className="w-full py-3 rounded-xl border border-gray-200 text-center text-[13px] font-semibold text-gray-700 hover:bg-gray-50 transition-colors"
+            >
+              Learn about Stampd for merchants
+            </Link>
+          </div>
+        </div>
+      </div>
+    )
   }
 
   // ── Derived ───────────────────────────────────────────────────
