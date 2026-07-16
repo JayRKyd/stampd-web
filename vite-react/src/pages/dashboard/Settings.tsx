@@ -1,7 +1,8 @@
-import { useState, useEffect } from 'react'
-import { Trash2, Lock } from 'lucide-react'
+import { useState, useEffect, useRef } from 'react'
+import { Trash2, Lock, Upload, X } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
 import { BUSINESS_CATEGORIES, normalizeCategory } from '@/lib/categories'
+import { resizeImage } from '@/lib/resizeImage'
 
 interface StaffMember {
   id: string
@@ -24,6 +25,13 @@ export default function Settings() {
   const [saving, setSaving] = useState(false)
   const [saved, setSaved] = useState(false)
 
+  // Cover photo: the hero image across the top of the merchant page in the app
+  const [coverUrl, setCoverUrl] = useState<string | null>(null)
+  const [coverFile, setCoverFile] = useState<File | null>(null)
+  const [coverLocalPreview, setCoverLocalPreview] = useState<string | null>(null)
+  const [coverError, setCoverError] = useState('')
+  const coverRef = useRef<HTMLInputElement>(null)
+
   // Staff & stamping settings
   const [staff, setStaff] = useState<StaffMember[]>([])
   const [newStaffName, setNewStaffName] = useState('')
@@ -44,7 +52,7 @@ export default function Settings() {
 
       const { data: merchant } = await supabase
         .from('merchants')
-        .select('id, business_name, category, address, phone, website, description, require_staff_pin, stamp_cooldown_minutes')
+        .select('id, business_name, category, address, phone, website, description, cover_image_url, require_staff_pin, stamp_cooldown_minutes')
         .eq('owner_id', user.id)
         .maybeSingle()
 
@@ -58,6 +66,7 @@ export default function Settings() {
           website: merchant.website ?? '',
           description: merchant.description ?? '',
         })
+        setCoverUrl(merchant.cover_image_url ?? null)
         setRequirePin(!!merchant.require_staff_pin)
         setCooldown(merchant.stamp_cooldown_minutes ?? 5)
 
@@ -74,10 +83,55 @@ export default function Settings() {
     load()
   }, [])
 
+  const handleCoverChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (!file) return
+    // Covers are hero images — keep more resolution than a logo
+    const resized = await resizeImage(file, 1600)
+    if (resized.size > 4 * 1024 * 1024) {
+      setCoverError('Photo is too large — try a smaller image.')
+      e.target.value = ''
+      return
+    }
+    setCoverError('')
+    setCoverFile(resized)
+    setCoverLocalPreview(URL.createObjectURL(resized))
+  }
+
+  const handleRemoveCover = () => {
+    setCoverUrl(null)
+    setCoverFile(null)
+    setCoverLocalPreview(null)
+    setCoverError('')
+  }
+
   const handleSave = async () => {
     if (!merchantId) return
     setSaving(true)
     const supabase = createClient()
+
+    let cover_image_url = coverUrl
+    if (coverFile) {
+      const ext = (coverFile.name.split('.').pop() || 'jpg').toLowerCase()
+      const path = `merchants/${merchantId}/cover.${ext}`
+      const { error: upErr } = await supabase.storage
+        .from('merchant-assets')
+        .upload(path, coverFile, { upsert: true, contentType: coverFile.type || undefined })
+      if (upErr) {
+        setCoverError('Cover photo upload failed — your other changes were still saved.')
+      } else {
+        const { data: { publicUrl } } = supabase.storage
+          .from('merchant-assets')
+          .getPublicUrl(path)
+        // Cache-bust: the app caches images by URL, and replacing the file
+        // at the same path would otherwise keep showing the old photo
+        cover_image_url = `${publicUrl}?v=${Date.now()}`
+        setCoverUrl(cover_image_url)
+        setCoverFile(null)
+        setCoverLocalPreview(null)
+      }
+    }
+
     await supabase.from('merchants').update({
       business_name: form.businessName,
       category: form.category || null,
@@ -85,6 +139,7 @@ export default function Settings() {
       phone: form.phone || null,
       website: form.website || null,
       description: form.description || null,
+      cover_image_url,
     }).eq('id', merchantId)
     setSaving(false)
     setSaved(true)
@@ -238,6 +293,61 @@ export default function Settings() {
                   placeholder="Tell customers about your business…"
                   className={`${inputClass} resize-none`}
                 />
+              </div>
+
+              {/* Cover photo */}
+              <div className="sm:col-span-2">
+                <label className="block text-[12px] font-medium text-gray-600 mb-1.5">Cover Photo</label>
+                <p className="text-[12px] text-gray-400 mb-2">
+                  Shown across the top of your page in the app. A landscape photo of your
+                  shop, your work, or your products works best.
+                </p>
+                <input
+                  ref={coverRef}
+                  type="file"
+                  accept="image/png,image/jpeg,image/webp"
+                  onChange={handleCoverChange}
+                  className="hidden"
+                />
+                {(coverLocalPreview || coverUrl) ? (
+                  <div>
+                    <div className="relative rounded-xl overflow-hidden border border-gray-200 bg-gray-100 aspect-[2.2/1]">
+                      <img
+                        src={coverLocalPreview || coverUrl!}
+                        alt="Cover preview"
+                        className="absolute inset-0 h-full w-full object-cover"
+                      />
+                    </div>
+                    <div className="flex items-center gap-4 mt-2">
+                      <button
+                        onClick={() => coverRef.current?.click()}
+                        className="text-[12px] text-gray-600 font-medium hover:underline"
+                      >
+                        Replace
+                      </button>
+                      <button
+                        onClick={handleRemoveCover}
+                        className="text-[12px] text-red-600 font-medium hover:underline flex items-center gap-1"
+                      >
+                        <X size={12} /> Remove
+                      </button>
+                      {coverFile && (
+                        <span className="text-[12px] text-gray-400">Saved when you click Save Changes</span>
+                      )}
+                    </div>
+                  </div>
+                ) : (
+                  <button
+                    onClick={() => coverRef.current?.click()}
+                    className="w-full flex flex-col items-center justify-center gap-2 py-8 rounded-xl border border-dashed border-gray-300 hover:border-gray-400 hover:bg-gray-50 transition-all text-gray-500"
+                  >
+                    <Upload size={18} />
+                    <span className="text-[12px]">Upload a cover photo</span>
+                  </button>
+                )}
+                {coverError && (
+                  <p className="text-[12px] text-red-600 mt-2">{coverError}</p>
+                )}
               </div>
             </div>
 
