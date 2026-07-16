@@ -1,8 +1,10 @@
 import { useState, useEffect, useRef } from 'react'
-import { Trash2, Lock, Upload, X } from 'lucide-react'
+import { useNavigate } from 'react-router-dom'
+import { Trash2, Lock, Upload, X, Monitor } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
 import { BUSINESS_CATEGORIES, normalizeCategory } from '@/lib/categories'
 import { resizeImage } from '@/lib/resizeImage'
+import { enterKioskMode } from '@/lib/kioskMode'
 
 interface StaffMember {
   id: string
@@ -12,6 +14,7 @@ interface StaffMember {
 }
 
 export default function Settings() {
+  const navigate = useNavigate()
   const [merchantId, setMerchantId] = useState('')
   const [form, setForm] = useState({
     businessName: '',
@@ -510,6 +513,44 @@ export default function Settings() {
                 }`}
               >
                 {savingStamping ? 'Saving…' : savedStamping ? 'Saved ✓' : 'Save Stamping Rules'}
+              </button>
+            </div>
+          </div>
+        </section>
+
+        {/* ── Counter mode ── */}
+        <section className="grid grid-cols-1 lg:grid-cols-3 gap-4 lg:gap-8">
+          <div>
+            <h2 className="text-[15px] font-semibold text-gray-900">Counter mode</h2>
+            <p className="text-[12px] text-gray-500 mt-1 leading-relaxed">
+              For the device that lives at your counter. Staff can stamp
+              customers, but the rest of the dashboard stays locked.
+            </p>
+          </div>
+
+          <div className="lg:col-span-2 bg-white border border-gray-200 rounded-xl p-5">
+            <div className="flex items-start gap-4">
+              <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-brand-50 text-brand-600 shrink-0">
+                <Monitor size={18} strokeWidth={1.75} />
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className="text-[13px] font-medium text-gray-900">Lock this device to the Stamp page</p>
+                <ul className="text-[12px] text-gray-500 mt-1.5 space-y-1 leading-relaxed">
+                  <li>· Staff still pick their name (and PIN, if required) for every stamp</li>
+                  <li>· Dashboard, Customers, Analytics and Settings become unreachable</li>
+                  <li>· Only your account password unlocks this device again</li>
+                </ul>
+                <p className="text-[12px] text-gray-400 mt-2">
+                  Applies to this device only — your own laptop or phone stays fully open.
+                </p>
+              </div>
+            </div>
+            <div className="mt-4 pt-4 border-t border-gray-100 flex justify-end">
+              <button
+                onClick={() => { enterKioskMode(); navigate('/stamp') }}
+                className="flex items-center gap-1.5 px-5 py-2.5 rounded-lg bg-brand-500 text-[13px] font-semibold text-white hover:bg-brand-600 transition-colors focus-ring"
+              >
+                <Lock size={13} /> Turn on counter mode
               </button>
             </div>
           </div>

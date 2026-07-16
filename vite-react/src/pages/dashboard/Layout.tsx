@@ -6,6 +6,7 @@ import {
 } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
 import { MerchantStatusProvider } from '@/lib/merchantStatus'
+import { isKioskMode, exitKioskMode, KIOSK_EVENT } from '@/lib/kioskMode'
 
 const NAV_ITEMS = [
   { to: '/dashboard',     icon: LayoutDashboard, label: 'Dashboard' },
@@ -26,6 +27,50 @@ export default function DashboardLayout() {
   const [setupComplete, setSetupComplete] = useState(true)
   const navigate = useNavigate()
   const location = useLocation()
+
+  // Counter mode: this device is locked to the Stamp page (see lib/kioskMode)
+  const [kiosk, setKiosk] = useState(() => isKioskMode())
+  const [exitOpen, setExitOpen] = useState(false)
+  const [exitPw, setExitPw] = useState('')
+  const [exitErr, setExitErr] = useState('')
+  const [exitLoading, setExitLoading] = useState(false)
+
+  useEffect(() => {
+    const sync = () => setKiosk(isKioskMode())
+    window.addEventListener(KIOSK_EVENT, sync)
+    return () => window.removeEventListener(KIOSK_EVENT, sync)
+  }, [])
+
+  useEffect(() => {
+    if (kiosk && location.pathname !== '/stamp') navigate('/stamp', { replace: true })
+  }, [kiosk, location.pathname, navigate])
+
+  async function handleExitKiosk(e: React.FormEvent) {
+    e.preventDefault()
+    if (!exitPw) return
+    setExitLoading(true)
+    setExitErr('')
+    const supabase = createClient()
+    const { data: { session } } = await supabase.auth.getSession()
+    const email = session?.user?.email
+    if (!email) {
+      setExitLoading(false)
+      setExitErr('Could not verify your account — check your connection.')
+      return
+    }
+    // Re-authenticating with the same account verifies the password without
+    // changing who is signed in.
+    const { error } = await supabase.auth.signInWithPassword({ email, password: exitPw })
+    setExitLoading(false)
+    if (error) {
+      setExitErr('Incorrect password')
+      setExitPw('')
+      return
+    }
+    exitKioskMode()
+    setExitOpen(false)
+    setExitPw('')
+  }
 
   const allNavItems = [...NAV_ITEMS, { to: '/onboarding', icon: BookOpen, label: 'Setup Guide' }]
   const currentPage = allNavItems.find(item => location.pathname.startsWith(item.to))
@@ -75,6 +120,94 @@ export default function DashboardLayout() {
   async function handleSignOut() {
     await createClient().auth.signOut()
     navigate('/login')
+  }
+
+  // ── Counter mode: no sidebar, no nav, no sign-out — just the Stamp page.
+  // Staff still pick who's stamping on the page itself; unlocking the full
+  // dashboard requires the account password.
+  if (kiosk) {
+    return (
+      <div className="flex h-dvh w-full flex-col overflow-hidden bg-white">
+        <header className="flex items-center justify-between h-14 px-4 lg:px-8 border-b border-gray-100 shrink-0">
+          <div className="flex items-center gap-2.5">
+            <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-brand-500">
+              <div className="grid grid-cols-2 gap-[3px]">
+                <div className="h-[5px] w-[5px] rounded-full bg-white/90" />
+                <div className="h-[5px] w-[5px] rounded-full bg-white/90" />
+                <div className="h-[5px] w-[5px] rounded-full bg-white/90" />
+                <div className="h-[5px] w-[5px] rounded-full bg-accent-400" />
+              </div>
+            </div>
+            <span className="text-[15px] font-semibold text-gray-900 tracking-[-0.01em]">Stampd</span>
+            <span className="ml-1 text-[11px] font-semibold text-brand-600 bg-brand-50 border border-brand-100 rounded-full px-2.5 py-0.5">
+              Counter mode
+            </span>
+          </div>
+          <button
+            onClick={() => { setExitErr(''); setExitPw(''); setExitOpen(true) }}
+            className="flex items-center gap-1.5 text-[12px] font-medium text-gray-500 hover:text-gray-900 transition-colors"
+          >
+            <Lock size={13} /> Exit
+          </button>
+        </header>
+
+        <main className="flex-1 overflow-y-auto">
+          <div className="px-4 lg:px-8 py-6 lg:py-8">
+            <MerchantStatusProvider isActive={isActive} loading={statusLoading}>
+              <Outlet />
+            </MerchantStatusProvider>
+          </div>
+        </main>
+
+        {exitOpen && (
+          <div
+            className="fixed inset-0 z-50 flex items-center justify-center bg-gray-950/30 px-6"
+            onClick={() => !exitLoading && setExitOpen(false)}
+          >
+            <div
+              className="w-full max-w-[360px] bg-white rounded-2xl shadow-xl p-6"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className="mb-4 flex h-10 w-10 items-center justify-center rounded-full bg-brand-50 text-brand-600">
+                <Lock size={18} />
+              </div>
+              <h3 className="text-[16px] font-semibold text-gray-900 mb-1">Exit counter mode</h3>
+              <p className="text-[13px] text-gray-500 mb-4">
+                Enter the account password to unlock the full dashboard on this device.
+              </p>
+              <form onSubmit={handleExitKiosk}>
+                <input
+                  type="password"
+                  autoFocus
+                  value={exitPw}
+                  onChange={(e) => { setExitPw(e.target.value); setExitErr('') }}
+                  placeholder="Account password"
+                  className="w-full px-3 py-2.5 rounded-lg border border-gray-200 bg-gray-50 text-[13px] text-gray-900 focus:outline-none focus:border-brand-500 focus:ring-1 focus:ring-brand-500/20 transition-all placeholder:text-gray-300"
+                />
+                {exitErr && <p className="text-[12px] text-red-600 mt-2">{exitErr}</p>}
+                <div className="flex gap-2 mt-4">
+                  <button
+                    type="button"
+                    onClick={() => setExitOpen(false)}
+                    disabled={exitLoading}
+                    className="flex-1 py-2.5 rounded-lg border border-gray-200 text-[13px] font-medium text-gray-600 hover:bg-gray-50 transition-colors"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="submit"
+                    disabled={exitLoading || !exitPw}
+                    className="flex-1 py-2.5 rounded-lg bg-brand-500 text-[13px] font-semibold text-white hover:bg-brand-600 transition-colors disabled:opacity-50"
+                  >
+                    {exitLoading ? 'Checking…' : 'Unlock'}
+                  </button>
+                </div>
+              </form>
+            </div>
+          </div>
+        )}
+      </div>
+    )
   }
 
   return (
