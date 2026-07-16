@@ -417,27 +417,38 @@ export default function Settings() {
                 </p>
               )}
 
-              <div className="flex gap-2">
-                <input
-                  type="text"
-                  value={newStaffName}
-                  onChange={(e) => setNewStaffName(e.target.value)}
-                  onKeyDown={(e) => { if (e.key === 'Enter') handleAddStaff() }}
-                  placeholder="Staff name"
-                  className={`${inputClass} flex-1`}
-                />
-                <input
-                  type="text"
-                  inputMode="numeric"
-                  value={newStaffPin}
-                  onChange={(e) => setNewStaffPin(e.target.value.replace(/\D/g, '').slice(0, 4))}
-                  placeholder="PIN (optional)"
-                  className={`${inputClass} w-32`}
-                />
+              {/* Fixed-width wrappers, not competing width utilities on the
+                  inputs themselves — the name field used to collapse to a
+                  sliver, leaving Add permanently disabled */}
+              <div className="flex flex-col sm:flex-row sm:items-end gap-2">
+                <div className="flex-1 min-w-0">
+                  <label className="block text-[12px] font-medium text-gray-600 mb-1.5">Staff name</label>
+                  <input
+                    type="text"
+                    value={newStaffName}
+                    onChange={(e) => setNewStaffName(e.target.value)}
+                    onKeyDown={(e) => { if (e.key === 'Enter') handleAddStaff() }}
+                    placeholder="e.g. Marcus"
+                    className={inputClass}
+                  />
+                </div>
+                <div className="sm:w-40">
+                  <label className="block text-[12px] font-medium text-gray-600 mb-1.5">
+                    4-digit PIN <span className="text-gray-400 font-normal">(optional)</span>
+                  </label>
+                  <input
+                    type="text"
+                    inputMode="numeric"
+                    value={newStaffPin}
+                    onChange={(e) => setNewStaffPin(e.target.value.replace(/\D/g, '').slice(0, 4))}
+                    placeholder="Numbers only"
+                    className={inputClass}
+                  />
+                </div>
                 <button
                   onClick={handleAddStaff}
                   disabled={addingStaff || !newStaffName.trim() || !merchantId}
-                  className="px-4 py-2.5 rounded-lg bg-brand-500 text-[13px] font-semibold text-white hover:bg-brand-600 transition-colors disabled:opacity-50 shrink-0"
+                  className="px-5 py-2.5 rounded-lg bg-brand-500 text-[13px] font-semibold text-white hover:bg-brand-600 transition-colors disabled:opacity-50 shrink-0"
                 >
                   {addingStaff ? 'Adding…' : 'Add'}
                 </button>
