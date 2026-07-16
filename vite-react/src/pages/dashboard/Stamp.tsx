@@ -193,8 +193,8 @@ export default function Stamp() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [merchantId])
 
-  const queueStamp = () => {
-    if (staffList.length > 0 && !selectedStaffId) return
+  // The actual enqueue — call only after the staff gate has been satisfied
+  const pushToQueue = () => {
     const queue = readQueue()
     queue.push({ pin, quantity, staffId: selectedStaffId, queuedAt: new Date().toISOString() })
     writeQueue(queue)
@@ -224,6 +224,20 @@ export default function Stamp() {
   const selectedStaff = staffList.find(s => s.id === selectedStaffId) ?? null
   const needsStaffPinCheck =
     requireStaffPin && !!selectedStaff?.pin && verifiedStaffId !== selectedStaffId
+
+  // Offline queue entry point — the staff gate applies exactly as it does
+  // online; losing wifi must not turn the PIN requirement off
+  const queueStamp = () => {
+    if (staffList.length > 0 && !selectedStaffId) return
+    if (requireStaffPin && selectedStaff && !selectedStaff.pin) return
+    if (needsStaffPinCheck) {
+      setStaffPinInput('')
+      setStaffPinError('')
+      setState('staff_pin')
+      return
+    }
+    pushToQueue()
+  }
 
   const handlePinChange = async (value: string) => {
     const cleaned = value.replace(/\D/g, '').slice(0, 6)
@@ -288,7 +302,10 @@ export default function Stamp() {
     if (!selectedStaff) return
     if (staffPinInput === selectedStaff.pin) {
       setVerifiedStaffId(selectedStaff.id)
-      issueStamp(false)
+      // Offline there is no customer lookup — the verified stamp goes to
+      // the queue instead of the RPC
+      if (!navigator.onLine) pushToQueue()
+      else issueStamp(false)
     } else {
       setStaffPinError('Incorrect PIN. Try again.')
       setStaffPinInput('')
