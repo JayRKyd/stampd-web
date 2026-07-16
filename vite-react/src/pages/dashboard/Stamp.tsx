@@ -104,12 +104,15 @@ export default function Stamp() {
       setStaffList(list)
       setStaffLoaded(true)
 
-      // Pre-select last-used staff (or the only one) so the common case is zero taps
+      // Pre-select last-used staff (or the only one) so the common case is
+      // zero taps. When PINs are required, staff without one can't stamp —
+      // never auto-select them.
+      const selectable = merchant.require_staff_pin ? list.filter(s => s.pin) : list
       const remembered = localStorage.getItem(LAST_STAFF_KEY)
-      if (remembered && list.some(s => s.id === remembered)) {
+      if (remembered && selectable.some(s => s.id === remembered)) {
         setSelectedStaffId(remembered)
-      } else if (list.length === 1) {
-        setSelectedStaffId(list[0].id)
+      } else if (selectable.length === 1) {
+        setSelectedStaffId(selectable[0].id)
       }
 
       const start = new Date()
@@ -203,6 +206,10 @@ export default function Stamp() {
   }
 
   const selectStaff = (id: string) => {
+    // "Require staff PIN" means require: a staff member with no PIN can't
+    // be stamped under, or the gate would have a permanently open door
+    const target = staffList.find(s => s.id === id)
+    if (requireStaffPin && target && !target.pin) return
     setSelectedStaffId(id)
     localStorage.setItem(LAST_STAFF_KEY, id)
     setStaffPinInput('')
@@ -267,6 +274,7 @@ export default function Stamp() {
   const startIssue = () => {
     // Staff must be chosen when staff profiles exist (accountability)
     if (staffList.length > 0 && !selectedStaffId) return
+    if (requireStaffPin && selectedStaff && !selectedStaff.pin) return
     if (needsStaffPinCheck) {
       setStaffPinInput('')
       setStaffPinError('')
@@ -470,23 +478,37 @@ export default function Stamp() {
         <div className="mb-4">
           <p className="text-[11px] font-semibold text-gray-400 uppercase tracking-wider mb-2">Stamping as</p>
           <div className="flex gap-2 flex-wrap">
-            {staffList.map(s => (
-              <button
-                key={s.id}
-                onClick={() => selectStaff(s.id)}
-                className={`px-4 py-2.5 rounded-lg text-[13px] font-semibold transition-all ${
-                  selectedStaffId === s.id
-                    ? 'bg-brand-500 text-white shadow-sm'
-                    : 'bg-white border border-gray-200 text-gray-600 hover:border-brand-400 hover:text-brand-600'
-                }`}
-              >
-                {s.name}
-                {requireStaffPin && s.pin && (
-                  <Lock size={11} className={`inline ml-1.5 -mt-0.5 ${selectedStaffId === s.id ? 'opacity-80' : 'opacity-50'}`} />
-                )}
-              </button>
-            ))}
+            {staffList.map(s => {
+              const blocked = requireStaffPin && !s.pin
+              return (
+                <button
+                  key={s.id}
+                  onClick={() => selectStaff(s.id)}
+                  disabled={blocked}
+                  title={blocked ? 'No PIN set — add one in Settings before they can stamp' : undefined}
+                  className={`px-4 py-2.5 rounded-lg text-[13px] font-semibold transition-all ${
+                    blocked
+                      ? 'bg-gray-50 border border-dashed border-gray-200 text-gray-300 cursor-not-allowed'
+                      : selectedStaffId === s.id
+                      ? 'bg-brand-500 text-white shadow-sm'
+                      : 'bg-white border border-gray-200 text-gray-600 hover:border-brand-400 hover:text-brand-600'
+                  }`}
+                >
+                  {s.name}
+                  {requireStaffPin && s.pin && (
+                    <Lock size={11} className={`inline ml-1.5 -mt-0.5 ${selectedStaffId === s.id ? 'opacity-80' : 'opacity-50'}`} />
+                  )}
+                  {blocked && <span className="ml-1.5 text-[10px] font-medium">No PIN</span>}
+                </button>
+              )
+            })}
           </div>
+          {requireStaffPin && staffList.some(s => !s.pin) && (
+            <p className="text-[11px] text-amber-700 mt-2">
+              Greyed-out names have no PIN and can't stamp while "Require staff PIN" is on —{' '}
+              <Link to="/settings" className="font-semibold underline">add PINs in Settings</Link>.
+            </p>
+          )}
         </div>
       )}
 

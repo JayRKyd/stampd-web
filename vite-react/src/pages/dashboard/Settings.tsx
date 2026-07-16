@@ -389,11 +389,18 @@ export default function Settings() {
                       </span>
                     </div>
                     <p className="flex-1 text-[13px] font-medium text-gray-900 truncate">{s.name}</p>
-                    {s.pin && (
+                    {s.pin ? (
                       <span className="flex items-center gap-1 text-[11px] text-gray-400 bg-gray-50 border border-gray-100 rounded-md px-2 py-1">
                         <Lock size={11} /> PIN set
                       </span>
-                    )}
+                    ) : requirePin ? (
+                      <span
+                        className="text-[11px] text-amber-700 bg-amber-50 border border-amber-200 rounded-md px-2 py-1"
+                        title='This person cannot stamp while "Require staff PIN" is on. Remove and re-add them with a PIN.'
+                      >
+                        No PIN — can't stamp
+                      </span>
+                    ) : null}
                     <button
                       onClick={() => handleRemoveStaff(s.id)}
                       className="text-gray-300 hover:text-red-500 transition-colors p-1.5"
