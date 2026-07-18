@@ -8,6 +8,8 @@ import Register from '@/pages/auth/Register';
 import ForgotPassword from '@/pages/auth/ForgotPassword';
 import ResetPassword from '@/pages/auth/ResetPassword';
 import Confirmed from '@/pages/auth/Confirmed';
+import Privacy from '@/pages/legal/Privacy';
+import Terms from '@/pages/legal/Terms';
 import NotFound from '@/pages/NotFound';
 import Dashboard from '@/pages/dashboard/Dashboard';
 import Stamp from '@/pages/dashboard/Stamp';
@@ -31,6 +33,8 @@ export default function App() {
         <Route path="/forgot-password" element={<ForgotPassword />} />
         <Route path="/reset-password" element={<ResetPassword />} />
         <Route path="/confirmed" element={<Confirmed />} />
+        <Route path="/privacy" element={<Privacy />} />
+        <Route path="/terms" element={<Terms />} />
         <Route path="/admin" element={<Admin />} />
         <Route
           element={

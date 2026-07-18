@@ -14,6 +14,7 @@ export default function Register() {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
   const [emailSent, setEmailSent] = useState(false)
+  const [legalAccepted, setLegalAccepted] = useState(false)
   const navigate = useNavigate()
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -21,6 +22,10 @@ export default function Register() {
 
     if (!businessName.trim()) {
       setError('Business name is required')
+      return
+    }
+    if (!legalAccepted) {
+      setError('Please agree to the Terms of Service and Privacy Policy')
       return
     }
     if (password.length < 6) {
@@ -183,10 +188,26 @@ export default function Register() {
               </button>
             </div>
 
+            {/* Legal agreement */}
+            <label className="flex items-start gap-2.5 cursor-pointer select-none pt-1">
+              <input
+                type="checkbox"
+                checked={legalAccepted}
+                onChange={(e) => { setLegalAccepted(e.target.checked); setError('') }}
+                className="mt-0.5 h-4 w-4 shrink-0 rounded border-gray-300 text-brand-500 focus:ring-brand-500 accent-brand-500"
+              />
+              <span className="text-[13px] text-gray-600 leading-relaxed">
+                I agree to the{' '}
+                <a href="/terms" target="_blank" rel="noopener noreferrer" className="text-brand-600 font-medium hover:underline">Terms of Service</a>
+                {' '}and acknowledge the{' '}
+                <a href="/privacy" target="_blank" rel="noopener noreferrer" className="text-brand-600 font-medium hover:underline">Privacy Policy</a>.
+              </span>
+            </label>
+
             {/* Submit */}
             <button
               type="submit"
-              disabled={loading}
+              disabled={loading || !legalAccepted}
               className="w-full py-3.5 rounded-lg bg-brand-500 text-[15px] font-semibold text-white hover:bg-brand-600 transition-colors disabled:opacity-50 mt-2"
             >
               {loading ? 'Creating account…' : 'Create Account'}

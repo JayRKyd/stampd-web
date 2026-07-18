@@ -52,6 +52,12 @@ export function MarketingFooter() {
         <Link to="/merchants" className="text-[13px] font-medium text-[#74807E] hover:text-[#1A2B2A] transition-colors">
           For merchants
         </Link>
+        <Link to="/privacy" className="text-[13px] font-medium text-[#74807E] hover:text-[#1A2B2A] transition-colors">
+          Privacy
+        </Link>
+        <Link to="/terms" className="text-[13px] font-medium text-[#74807E] hover:text-[#1A2B2A] transition-colors">
+          Terms
+        </Link>
         {contact && (
           <a
             href={contact}
