@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Trash2, Lock, Upload, X, Monitor } from 'lucide-react'
+import { Trash2, Lock, Upload, X, Monitor, Smartphone, Share } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
 import { BUSINESS_CATEGORIES, normalizeCategory } from '@/lib/categories'
 import { resizeImage } from '@/lib/resizeImage'
@@ -27,6 +27,28 @@ export default function Settings() {
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const [saved, setSaved] = useState(false)
+
+  // PWA install: Chrome/Android hand us a deferred prompt we can trigger from
+  // a button; iOS Safari has no API, so we show Add-to-Home-Screen steps
+  const [installPrompt, setInstallPrompt] = useState<{ prompt: () => Promise<unknown> } | null>(null)
+  const [justInstalled, setJustInstalled] = useState(false)
+  const isStandalone = typeof window !== 'undefined' &&
+    window.matchMedia?.('(display-mode: standalone)').matches
+  const isIOS = typeof navigator !== 'undefined' && /iphone|ipad|ipod/i.test(navigator.userAgent)
+
+  useEffect(() => {
+    const onPrompt = (e: Event) => {
+      e.preventDefault()
+      setInstallPrompt(e as unknown as { prompt: () => Promise<unknown> })
+    }
+    const onInstalled = () => { setJustInstalled(true); setInstallPrompt(null) }
+    window.addEventListener('beforeinstallprompt', onPrompt)
+    window.addEventListener('appinstalled', onInstalled)
+    return () => {
+      window.removeEventListener('beforeinstallprompt', onPrompt)
+      window.removeEventListener('appinstalled', onInstalled)
+    }
+  }, [])
 
   // Cover photo: the hero image across the top of the merchant page in the app
   const [coverUrl, setCoverUrl] = useState<string | null>(null)
@@ -571,6 +593,69 @@ export default function Settings() {
                 <Lock size={13} /> Turn on counter mode
               </button>
             </div>
+          </div>
+        </section>
+
+        {/* ── Install on phone (PWA) ── */}
+        <section className="grid grid-cols-1 lg:grid-cols-3 gap-4 lg:gap-8">
+          <div>
+            <h2 className="text-[15px] font-semibold text-gray-900">Stampd on your phone</h2>
+            <p className="text-[12px] text-gray-500 mt-1 leading-relaxed">
+              Install the dashboard as an app — full screen, its own icon,
+              perfect for stamping at the counter.
+            </p>
+          </div>
+
+          <div className="lg:col-span-2 bg-white border border-gray-200 rounded-xl p-5">
+            {isStandalone ? (
+              <div className="flex items-center gap-3">
+                <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-green-100 text-green-700 shrink-0">
+                  <Smartphone size={18} strokeWidth={1.75} />
+                </div>
+                <p className="text-[13px] text-gray-700">
+                  You're using the installed app — nothing more to do here.
+                </p>
+              </div>
+            ) : (
+              <div className="flex items-start gap-4">
+                <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-brand-50 text-brand-600 shrink-0">
+                  <Smartphone size={18} strokeWidth={1.75} />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-[13px] font-medium text-gray-900">Add Stampd to your home screen</p>
+                  <p className="text-[12px] text-gray-500 mt-1 leading-relaxed">
+                    Works offline at the counter, opens full screen, and pairs
+                    perfectly with counter mode.
+                  </p>
+
+                  {justInstalled ? (
+                    <p className="text-[12px] text-green-700 bg-green-50 border border-green-200 rounded-lg px-3 py-2.5 mt-3">
+                      Installed — look for the Stampd icon on your home screen.
+                    </p>
+                  ) : installPrompt ? (
+                    <button
+                      onClick={() => installPrompt.prompt()}
+                      className="mt-3 flex items-center gap-1.5 px-5 py-2.5 rounded-lg bg-brand-500 text-[13px] font-semibold text-white hover:bg-brand-600 transition-colors focus-ring"
+                    >
+                      <Smartphone size={13} /> Install app
+                    </button>
+                  ) : isIOS ? (
+                    <ol className="text-[12px] text-gray-600 mt-3 space-y-1.5 leading-relaxed list-decimal list-inside">
+                      <li>Open this page in <span className="font-semibold">Safari</span> on your iPhone or iPad</li>
+                      <li>Tap the <Share size={12} className="inline -mt-0.5" /> <span className="font-semibold">Share</span> button</li>
+                      <li>Scroll down and tap <span className="font-semibold">Add to Home Screen</span></li>
+                    </ol>
+                  ) : (
+                    <p className="text-[12px] text-gray-500 mt-3">
+                      On your phone, open this page and choose{' '}
+                      <span className="font-semibold text-gray-700">Install app</span> (or{' '}
+                      <span className="font-semibold text-gray-700">Add to Home screen</span>) from
+                      the browser menu.
+                    </p>
+                  )}
+                </div>
+              </div>
+            )}
           </div>
         </section>
       </div>
