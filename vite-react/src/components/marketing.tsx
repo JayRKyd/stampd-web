@@ -31,12 +31,12 @@ export function MarketingNav({ active }: { active?: 'home' | 'merchants' }) {
         >
           For merchants
         </Link>
-        <Link
-          to="/login"
+        <a
+          href="#waitlist"
           className="text-[13px] font-bold text-white bg-[#00605A] hover:bg-[#024D48] px-4 py-2 rounded-full transition-colors"
         >
-          Sign in
-        </Link>
+          Join waitlist
+        </a>
       </div>
     </nav>
   )
