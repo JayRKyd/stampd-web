@@ -4,6 +4,7 @@ import { useNavigate } from 'react-router-dom'
 import { createClient } from '@/lib/supabase/client'
 import { timeAgo } from '@/lib/timeAgo'
 import { isRewardReady, isSlipping, type CrmCustomer } from '@/lib/crm'
+import { MonthlyImpact } from '@/components/MonthlyImpact'
 
 interface ActivityItem {
   name: string
@@ -206,6 +207,9 @@ export default function Dashboard() {
           Issue Stamp
         </button>
       </div>
+
+      {/* Monthly impact — the value story, front and center */}
+      <MonthlyImpact />
 
       {/* Stat cards */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-6">
