@@ -1,8 +1,8 @@
-import { Link } from 'react-router-dom'
 import { WifiOff, Check, ArrowRight } from 'lucide-react'
 import {
   MarketingNav, MarketingFooter, MiniStampCard, MiniPinCells, MiniDashboard,
 } from '@/components/marketing'
+import { WaitlistForm } from '@/components/WaitlistForm'
 
 const INCLUDED = [
   'Unlimited stamps & customers',
@@ -39,21 +39,15 @@ export default function Merchants() {
             names, habits, and next visit in front of you.
           </p>
           <div className="mt-8 flex flex-wrap items-center gap-3">
-            <Link
-              to="/register"
+            <a
+              href="#waitlist"
               className="inline-flex items-center gap-2 px-6 py-3 rounded-full bg-[#00605A] text-white text-[14px] font-bold hover:bg-[#024D48] transition-colors"
             >
-              Start free <ArrowRight size={15} />
-            </Link>
-            <Link
-              to="/login"
-              className="px-6 py-3 rounded-full border border-[#1A2B2A]/15 text-[14px] font-bold hover:bg-white transition-colors"
-            >
-              Sign in
-            </Link>
+              Join the waitlist <ArrowRight size={15} />
+            </a>
           </div>
           <p className="mt-4 text-[12.5px] text-[#74807E]">
-            Free for 90 days · No credit card · Cancel anytime
+            Launching soon on Grand Bahama · Free for early merchants
           </p>
         </div>
 
@@ -165,22 +159,18 @@ export default function Merchants() {
         </div>
       </section>
 
-      {/* ── Final CTA ── */}
-      <section className="bg-[#00605A]">
-        <div className="w-[80%] max-w-[1600px] mx-auto py-16 text-center">
+      {/* ── Final CTA / waitlist ── */}
+      <section id="waitlist" className="bg-[#00605A] scroll-mt-16">
+        <div className="w-[80%] max-w-[1600px] mx-auto py-16 text-center flex flex-col items-center">
           <h2 className="text-[30px] md:text-[38px] lg:text-[44px] font-extrabold tracking-tight text-white mb-3">
             Your regulars are out there.
           </h2>
           <p className="text-[15px] lg:text-[17px] text-white/75 max-w-lg mx-auto mb-8">
-            Give them a reason to pick you every time. Set up your card tonight,
-            stamp your first customer this week.
+            We're onboarding Grand Bahama businesses in small batches. Join the
+            waitlist and we'll reach out when it's your turn — early merchants get
+            set up free.
           </p>
-          <Link
-            to="/register"
-            className="inline-flex items-center gap-2 px-7 py-3.5 rounded-full bg-[#F7F2E8] text-[#1A2B2A] text-[15px] font-bold hover:bg-white transition-colors"
-          >
-            Start your free 90 days <ArrowRight size={16} />
-          </Link>
+          <WaitlistForm audience="merchant" dark />
         </div>
       </section>
 

@@ -4,6 +4,7 @@ import {
   MarketingNav, MarketingFooter, MiniStampCard,
   MiniPinCard, MiniTicket, MiniNotification, MiniPinCells,
 } from '@/components/marketing'
+import { WaitlistForm } from '@/components/WaitlistForm'
 import { APP_STORE_URL, PLAY_STORE_URL } from '@/lib/support'
 
 const FAQS = [
@@ -209,19 +210,22 @@ export default function Landing() {
         </div>
       </section>
 
-      {/* ── Closing CTA ── */}
-      <section className="bg-white border-t border-black/5">
-        <div className="w-[80%] max-w-[1100px] mx-auto py-20 lg:py-28 text-center">
+      {/* ── Closing CTA / waitlist ── */}
+      <section id="waitlist" className="bg-white border-t border-black/5 scroll-mt-16">
+        <div className="w-[80%] max-w-[1100px] mx-auto py-20 lg:py-28 text-center flex flex-col items-center">
           <h2 className="text-[36px] md:text-[48px] lg:text-[64px] xl:text-[72px] font-extrabold tracking-[-0.035em] leading-[1.05]">
             Your favourite spots
             <br />
             <span className="text-[#c99a2e]">owe you one.</span>
           </h2>
           <p className="mt-5 text-[16px] lg:text-[18px] text-[#556570] max-w-md lg:max-w-lg mx-auto">
-            Download Stampd, grab your PIN, and start collecting at the places
-            you were going anyway.
+            Stampd is launching soon on Grand Bahama. Drop your email and we'll
+            tell you the moment it's ready to download.
           </p>
-          <div className="mt-8 flex flex-wrap justify-center gap-3">
+          <div className="mt-8 w-full flex justify-center">
+            <WaitlistForm audience="customer" />
+          </div>
+          <div className="mt-8 flex flex-wrap justify-center gap-3 opacity-70">
             <StoreBadge icon={Apple} store="App Store" sub="Download on the" href={APP_STORE_URL} />
             <StoreBadge icon={Play} store="Google Play" sub="Get it on" href={PLAY_STORE_URL} />
           </div>
