@@ -83,66 +83,67 @@ export function MonthlyImpact() {
   const hasActivity = totalVisits > 0 || newRegulars > 0
 
   return (
-    <div className="mb-6 rounded-2xl p-5 sm:p-6 text-white bg-gradient-to-br from-brand-500 to-brand-700">
-      <div className="flex items-center gap-2 mb-4">
-        <TrendingUp size={15} className="text-white/80" />
-        <p className="text-[12px] font-semibold uppercase tracking-wider text-white/70">
+    <div className="mb-6 rounded-2xl p-5 sm:p-6 text-white bg-gradient-to-br from-[#00655E] to-[#023B37]">
+      <div className="flex items-center gap-2 mb-5">
+        <TrendingUp size={14} className="text-white/70" />
+        <p className="text-[11.5px] font-semibold uppercase tracking-[0.12em] text-white/65">
           Your Stampd impact · {month}
         </p>
       </div>
 
       {!hasActivity ? (
         <div>
-          <p className="text-[20px] font-bold tracking-[-0.01em]">Your impact starts this month.</p>
-          <p className="text-[13.5px] text-white/75 mt-1.5 max-w-md leading-relaxed">
+          <p className="text-[19px] font-bold tracking-[-0.01em]">Your impact starts this month.</p>
+          <p className="text-[13.5px] text-white/70 mt-1.5 max-w-md leading-relaxed">
             Once you start stamping, this is where you'll see the regulars Stampd
-            brings back — and what those repeat visits are worth to you.
+            brings back, and what those repeat visits are worth to you.
           </p>
         </div>
       ) : (
-        <>
-          <div className="flex flex-wrap items-end gap-x-10 gap-y-5">
+        <div className="flex flex-col lg:flex-row lg:items-stretch gap-5">
+          {/* Activity — the loyalty proof */}
+          <div className="flex items-end gap-8 flex-1">
             <div>
-              <p className="text-[42px] font-bold leading-none tracking-[-0.02em]">{repeatVisits}</p>
-              <p className="text-[13px] text-white/80 mt-1.5">
-                repeat {repeatVisits === 1 ? 'visit' : 'visits'} from your regulars
+              <p className="text-[44px] font-bold leading-[0.9] tracking-[-0.03em]">{repeatVisits}</p>
+              <p className="text-[12.5px] text-white/75 mt-2.5">
+                repeat {repeatVisits === 1 ? 'visit' : 'visits'} from regulars
               </p>
             </div>
-            <div className="flex gap-8">
-              <div>
-                <p className="text-[24px] font-bold leading-none">{newRegulars}</p>
-                <p className="text-[12px] text-white/70 mt-1.5">new {newRegulars === 1 ? 'regular' : 'regulars'}</p>
-              </div>
-              <div>
-                <p className="text-[24px] font-bold leading-none">{rewardsRedeemed}</p>
-                <p className="text-[12px] text-white/70 mt-1.5">rewards redeemed</p>
-              </div>
+            <div className="pb-1">
+              <p className="text-[22px] font-bold leading-none">{newRegulars}</p>
+              <p className="text-[11.5px] text-white/60 mt-1.5">new {newRegulars === 1 ? 'regular' : 'regulars'}</p>
+            </div>
+            <div className="pb-1">
+              <p className="text-[22px] font-bold leading-none">{rewardsRedeemed}</p>
+              <p className="text-[11.5px] text-white/60 mt-1.5">rewards redeemed</p>
             </div>
           </div>
 
-          <div className="mt-5 pt-4 border-t border-white/15 flex flex-wrap items-center justify-between gap-2">
+          {/* Value — the money story, in its own readable panel */}
+          <div className="rounded-xl bg-white/10 border border-white/15 px-4 py-3.5 lg:w-[260px] flex flex-col justify-center">
             {repeatVisits > 0 ? (
-              <p className="text-[14.5px]">
-                ≈ <span className="font-bold text-[16px]">${estValue.toLocaleString()}</span> in repeat business this month
-              </p>
+              <>
+                <p className="text-[11.5px] text-white/60">Estimated repeat business</p>
+                <p className="text-[28px] font-bold leading-none mt-1">${estValue.toLocaleString()}</p>
+              </>
             ) : (
-              <p className="text-[13.5px] text-white/75">
-                Your first repeat visits will show their value here as customers come back.
+              <p className="text-[13px] text-white/75 leading-relaxed">
+                Your repeat business value appears here as regulars return.
               </p>
             )}
-            <label className="flex items-center gap-1.5 text-[12px] text-white/60">
-              based on a $
+            <label className="flex items-center gap-1.5 text-[11px] text-white/50 mt-2.5">
+              based on $
               <input
                 type="number"
                 min={1}
                 value={avgTicket}
                 onChange={(e) => updateTicket(Number(e.target.value))}
-                className="w-12 bg-white/10 border border-white/20 rounded-md px-1.5 py-0.5 text-center text-white text-[12px] focus:outline-none focus:border-white/50"
+                className="w-11 bg-white/10 border border-white/20 rounded px-1 py-0.5 text-center text-white text-[11.5px] focus:outline-none focus:border-white/50"
               />
-              average sale
+              avg sale
             </label>
           </div>
-        </>
+        </div>
       )}
     </div>
   )
