@@ -1,5 +1,4 @@
 import { useState, useEffect } from 'react'
-import { TrendingUp } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
 
 // The conversion panel: shows a merchant, in their own money, what Stampd did
@@ -83,64 +82,67 @@ export function MonthlyImpact() {
   const hasActivity = totalVisits > 0 || newRegulars > 0
 
   return (
-    <div className="mb-6 rounded-2xl p-5 sm:p-6 text-white bg-gradient-to-br from-[#00655E] to-[#023B37]">
-      <div className="flex items-center gap-2 mb-5">
-        <TrendingUp size={14} className="text-white/70" />
-        <p className="text-[11.5px] font-semibold uppercase tracking-[0.12em] text-white/65">
-          Your Stampd impact · {month}
-        </p>
-      </div>
+    <div className="mb-6 rounded-2xl px-6 py-6 sm:px-8 sm:py-7 text-white bg-[#024D48] relative overflow-hidden">
+      {/* Quiet brand texture: oversized stamp ring bleeding off the corner */}
+      <div
+        aria-hidden
+        className="absolute -right-16 -top-20 w-64 h-64 rounded-full border-[22px] border-white/[0.05] pointer-events-none"
+      />
+
+      <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-[#F5A623] mb-5">
+        {month} with Stampd
+      </p>
 
       {!hasActivity ? (
-        <div>
-          <p className="text-[19px] font-bold tracking-[-0.01em]">Your impact starts this month.</p>
-          <p className="text-[13.5px] text-white/70 mt-1.5 max-w-md leading-relaxed">
-            Once you start stamping, this is where you'll see the regulars Stampd
-            brings back, and what those repeat visits are worth to you.
+        <div className="relative">
+          <p className="text-[20px] font-bold tracking-[-0.01em]">Your first regulars start here.</p>
+          <p className="text-[13.5px] text-white/65 mt-1.5 max-w-md leading-relaxed">
+            Stamp your first customers and this becomes your monthly report: who
+            came back, and what those visits were worth.
           </p>
         </div>
       ) : (
-        <div className="flex flex-col lg:flex-row lg:items-stretch gap-5">
-          {/* Activity — the loyalty proof */}
-          <div className="flex items-end gap-8 flex-1">
-            <div>
-              <p className="text-[44px] font-bold leading-[0.9] tracking-[-0.03em]">{repeatVisits}</p>
-              <p className="text-[12.5px] text-white/75 mt-2.5">
-                repeat {repeatVisits === 1 ? 'visit' : 'visits'} from regulars
-              </p>
-            </div>
-            <div className="pb-1">
-              <p className="text-[22px] font-bold leading-none">{newRegulars}</p>
-              <p className="text-[11.5px] text-white/60 mt-1.5">new {newRegulars === 1 ? 'regular' : 'regulars'}</p>
-            </div>
-            <div className="pb-1">
-              <p className="text-[22px] font-bold leading-none">{rewardsRedeemed}</p>
-              <p className="text-[11.5px] text-white/60 mt-1.5">rewards redeemed</p>
-            </div>
-          </div>
+        <div className="relative">
+          {/* The story, told as a sentence */}
+          {repeatVisits > 0 ? (
+            <p className="text-[26px] sm:text-[30px] font-bold tracking-[-0.02em] leading-[1.25] max-w-2xl">
+              Your regulars came back{' '}
+              <span className="text-[#F5A623]">{repeatVisits} times</span> this
+              month — about{' '}
+              <span className="text-[#F5A623]">${estValue.toLocaleString()}</span>{' '}
+              in repeat business.
+            </p>
+          ) : (
+            <p className="text-[26px] sm:text-[30px] font-bold tracking-[-0.02em] leading-[1.25] max-w-2xl">
+              <span className="text-[#F5A623]">{newRegulars}</span> new{' '}
+              {newRegulars === 1 ? 'regular' : 'regulars'} joined your card this
+              month — their return visits will show up here.
+            </p>
+          )}
 
-          {/* Value — the money story, in its own readable panel */}
-          <div className="rounded-xl bg-white/10 border border-white/15 px-4 py-3.5 lg:w-[260px] flex flex-col justify-center">
-            {repeatVisits > 0 ? (
-              <>
-                <p className="text-[11.5px] text-white/60">Estimated repeat business</p>
-                <p className="text-[28px] font-bold leading-none mt-1">${estValue.toLocaleString()}</p>
-              </>
-            ) : (
-              <p className="text-[13px] text-white/75 leading-relaxed">
-                Your repeat business value appears here as regulars return.
-              </p>
-            )}
-            <label className="flex items-center gap-1.5 text-[11px] text-white/50 mt-2.5">
-              based on $
+          {/* Supporting facts: one quiet line, hairline-separated */}
+          <div className="mt-6 pt-4 border-t border-white/10 flex flex-wrap items-center gap-x-8 gap-y-3">
+            <p className="text-[13px] text-white/80">
+              <span className="font-bold text-white">{repeatVisits}</span>{' '}
+              repeat {repeatVisits === 1 ? 'visit' : 'visits'}
+            </p>
+            <p className="text-[13px] text-white/80">
+              <span className="font-bold text-white">{newRegulars}</span>{' '}
+              new {newRegulars === 1 ? 'regular' : 'regulars'}
+            </p>
+            <p className="text-[13px] text-white/80">
+              <span className="font-bold text-white">{rewardsRedeemed}</span>{' '}
+              {rewardsRedeemed === 1 ? 'reward' : 'rewards'} redeemed
+            </p>
+            <label className="ml-auto flex items-center gap-1 text-[12px] text-white/45">
+              average sale&nbsp;$
               <input
                 type="number"
                 min={1}
                 value={avgTicket}
                 onChange={(e) => updateTicket(Number(e.target.value))}
-                className="w-11 bg-white/10 border border-white/20 rounded px-1 py-0.5 text-center text-white text-[11.5px] focus:outline-none focus:border-white/50"
+                className="w-10 bg-transparent border-0 border-b border-white/25 px-0 py-0 text-center text-white/85 text-[12.5px] font-semibold focus:outline-none focus:border-[#F5A623] [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
               />
-              avg sale
             </label>
           </div>
         </div>
