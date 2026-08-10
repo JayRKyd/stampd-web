@@ -72,12 +72,21 @@ export default function Confirmed() {
             </div>
             <h1 className="text-[24px] font-bold text-gray-900 tracking-[-0.02em] mb-2">Email confirmed</h1>
             <p className="text-[14px] text-gray-600 mb-5">
-              You're all set. Open the Stampd app on your phone and sign in to start earning rewards.
+              You're all set. Head back to the Stampd app and sign in to start earning rewards.
             </p>
-            <div className="flex items-center gap-2.5 px-4 py-3 rounded-lg bg-gray-50 border border-gray-200">
-              <Smartphone size={18} className="text-gray-500 shrink-0" />
-              <p className="text-[13px] text-gray-600">You can close this page.</p>
-            </div>
+            {/* The app registers the stampd:// scheme, so this reopens it
+                directly. If the OS blocks the custom scheme (rare), the note
+                below still tells them to open it manually. */}
+            <a
+              href="stampd://"
+              className="flex items-center justify-center gap-2 w-full py-3.5 rounded-lg bg-brand-500 text-center text-[15px] font-semibold text-white hover:bg-brand-600 transition-colors"
+            >
+              <Smartphone size={18} className="shrink-0" />
+              Open Stampd
+            </a>
+            <p className="text-[13px] text-gray-500 text-center mt-3">
+              Not opening? Just reopen the Stampd app on your phone.
+            </p>
           </div>
         )}
 
