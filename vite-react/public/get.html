@@ -1,0 +1,67 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Get Stampd — Stampd Bahamas</title>
+  <meta name="robots" content="noindex">
+  <link rel="icon" href="/favicon.png">
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: 'Plus Jakarta Sans', 'Segoe UI', system-ui, sans-serif;
+      background: #0B3B34;
+      color: #F7F2E8;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      text-align: center;
+      padding: 24px;
+      gap: 14px;
+    }
+    img.logo { width: 84px; height: 84px; border-radius: 20px; }
+    h1 { font-size: 26px; letter-spacing: -0.5px; }
+    p { color: rgba(247, 242, 232, 0.8); font-size: 15px; max-width: 320px; line-height: 1.5; }
+    .btns { display: flex; flex-direction: column; gap: 12px; margin-top: 10px; width: 100%; max-width: 300px; }
+    a.btn {
+      display: block;
+      background: #F7F2E8;
+      color: #0B3B34;
+      text-decoration: none;
+      font-weight: 700;
+      font-size: 16px;
+      padding: 14px 20px;
+      border-radius: 999px;
+    }
+    a.btn.alt { background: transparent; color: #F7F2E8; border: 2px solid rgba(247, 242, 232, 0.5); }
+    .site { margin-top: 18px; font-size: 13px; color: #8FBFB7; }
+    .site a { color: #8FBFB7; }
+  </style>
+</head>
+<body>
+  <img class="logo" src="/pwa-192.png" alt="Stampd">
+  <h1>Get the Stampd app</h1>
+  <p>Taking you to the right store for your phone…</p>
+  <div class="btns">
+    <a class="btn" id="ios" href="https://apps.apple.com/us/app/stampd-bahamas/id6791025505">Download on the App&nbsp;Store</a>
+    <a class="btn alt" id="android" href="https://play.google.com/store/apps/details?id=com.stampdbahamas.app">Get it on Google&nbsp;Play</a>
+  </div>
+  <div class="site"><a href="https://www.stampdbahamas.com">stampdbahamas.com</a></div>
+  <script>
+    (function () {
+      var ua = navigator.userAgent || "";
+      var isIOS = /iPhone|iPad|iPod/i.test(ua) || (/Macintosh/i.test(ua) && navigator.maxTouchPoints > 1);
+      var isAndroid = /Android/i.test(ua);
+      if (isIOS) {
+        window.location.replace(document.getElementById("ios").href);
+      } else if (isAndroid) {
+        window.location.replace(document.getElementById("android").href);
+      } else {
+        document.querySelector("p").textContent = "Free on iPhone and Android.";
+      }
+    })();
+  </script>
+</body>
+</html>
