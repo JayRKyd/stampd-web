@@ -24,9 +24,9 @@ export default function Card() {
   const [cardId, setCardId] = useState('')
   const [businessName, setBusinessName] = useState('Your Business')
 
-  const [tiers, setTiers] = useState<Tier[]>([{ stamps: '10', reward: 'Free Coffee' }])
+  const [tiers, setTiers] = useState<Tier[]>([{ stamps: '10', reward: 'Free reward' }])
   const [tierError, setTierError] = useState('')
-  const [rewardDescription, setRewardDescription] = useState('Get a free coffee of any size on us!')
+  const [rewardDescription, setRewardDescription] = useState('Fill the card and your treat is on us!')
   const [cardColor, setCardColor] = useState('#00605a')
   const [stampIcon, setStampIcon] = useState('star')
   const [logo, setLogo] = useState<string | null>(null)

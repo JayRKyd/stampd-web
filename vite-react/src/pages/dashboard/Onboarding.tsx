@@ -814,10 +814,11 @@ export default function Onboarding() {
                     <input
                       type="number"
                       min={1}
+                      max={50}
                       value={tier.stamps}
                       onChange={e => {
                         const val = e.target.value
-                        if (val === '' || parseInt(val) >= 1) updateTier(i, 'stamps', val)
+                        if (val === '' || (parseInt(val) >= 1 && parseInt(val) <= 50)) updateTier(i, 'stamps', val)
                       }}
                       placeholder="Stamps"
                       className="w-20 bg-white border border-gray-200 rounded-lg px-2 py-1.5 text-[13px] text-gray-900 focus:outline-none focus:border-brand-500 focus:ring-1 focus:ring-brand-500/20 shrink-0"
