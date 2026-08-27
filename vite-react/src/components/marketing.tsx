@@ -1,5 +1,5 @@
 import { Link } from 'react-router-dom'
-import { Gift, MessageCircle, Check, ChevronRight, Fingerprint } from 'lucide-react'
+import { Gift, Check, ChevronRight, Fingerprint } from 'lucide-react'
 import { getStampIcon } from '@/lib/stampIcons'
 import { shade, isLightColor } from '@/lib/cardPreview'
 import { whatsappHref, contactHref } from '@/lib/support'
@@ -10,7 +10,7 @@ import { whatsappHref, contactHref } from '@/lib/support'
 export function MarketingNav({ active }: { active?: 'home' | 'merchants' }) {
   return (
     <nav className="sticky top-0 z-40 backdrop-blur-md bg-[#F7F2E8]/90 border-b border-black/5">
-      <div className="w-[80%] max-w-[1600px] mx-auto h-16 flex items-center gap-6">
+      <div className="w-[92%] lg:w-[80%] max-w-[1600px] mx-auto h-16 flex items-center gap-3 sm:gap-6">
         <Link to="/" className="text-[22px] font-extrabold tracking-tight text-[#1A2B2A]">
           Stampd
         </Link>
@@ -25,7 +25,7 @@ export function MarketingNav({ active }: { active?: 'home' | 'merchants' }) {
         </Link>
         <Link
           to="/merchants"
-          className={`text-[13px] font-semibold transition-colors ${
+          className={`text-[13px] font-semibold transition-colors whitespace-nowrap ${
             active === 'merchants' ? 'text-[#00605A]' : 'text-[#74807E] hover:text-[#1A2B2A]'
           }`}
         >
@@ -33,7 +33,7 @@ export function MarketingNav({ active }: { active?: 'home' | 'merchants' }) {
         </Link>
         <a
           href="#waitlist"
-          className="text-[13px] font-bold text-white bg-[#00605A] hover:bg-[#024D48] px-4 py-2 rounded-full transition-colors"
+          className="text-[13px] font-bold text-white bg-[#00605A] hover:bg-[#024D48] px-4 py-2 rounded-full transition-colors whitespace-nowrap shrink-0"
         >
           Join waitlist
         </a>
@@ -63,9 +63,9 @@ export function MarketingFooter() {
             href={contact}
             target="_blank"
             rel="noopener noreferrer"
-            className="flex items-center gap-1.5 text-[13px] font-medium text-[#74807E] hover:text-[#1A2B2A] transition-colors"
+            className="text-[13px] font-medium text-[#74807E] hover:text-[#1A2B2A] transition-colors"
           >
-            <MessageCircle size={14} /> Contact
+            Contact
           </a>
         )}
         <p className="text-[12px] text-[#74807E]">
