@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { Link } from 'react-router-dom'
 import { CheckCircle2, AlertCircle, Clock, Lock, Users, X, KeyRound, Copy, Check, Gift, Stamp as StampIcon, WifiOff } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
@@ -133,37 +133,51 @@ export default function Stamp() {
   }
 
   // Deliver queued stamps. Permanent failures (bad PIN) are dropped with a
-  // note; network failures keep the item for the next attempt.
+  // note; network failures keep the item for the next attempt. The queue is
+  // persisted after EVERY item — queued delivery bypasses the duplicate
+  // cooldown, so a phone dying mid-flush must never leave delivered stamps
+  // in storage to send twice. flushingRef stops the reconnect event and the
+  // page-load effect from draining the same queue concurrently.
+  const flushingRef = useRef(false)
   const flushQueue = async () => {
+    if (flushingRef.current) return
     if (!merchantId || !navigator.onLine) return
     const queue = readQueue()
     if (queue.length === 0) return
 
+    flushingRef.current = true
     const supabase = createClient()
-    const remaining: QueuedStamp[] = []
+    const keep: QueuedStamp[] = [] // transient failures — retry on next flush
     let delivered = 0
     let rejected = 0
 
-    for (const item of queue) {
-      try {
-        const { data, error } = await supabase.rpc('issue_stamp_by_personal_pin', {
-          p_pin: item.pin,
-          p_merchant_id: merchantId,
-          p_staff_id: item.staffId,
-          p_quantity: item.quantity,
-          // Merchant explicitly queued it — don't bounce on cooldown at delivery
-          p_override_cooldown: true,
-        })
-        if (error) { remaining.push(item); continue } // network/transient — retry later
-        const result = Array.isArray(data) ? data[0] : data
-        if (result?.success) delivered++
-        else rejected++ // invalid PIN etc. — dropping, retrying won't help
-      } catch {
-        remaining.push(item)
+    try {
+      for (let i = 0; i < queue.length; i++) {
+        const item = queue[i]
+        try {
+          const { data, error } = await supabase.rpc('issue_stamp_by_personal_pin', {
+            p_pin: item.pin,
+            p_merchant_id: merchantId,
+            p_staff_id: item.staffId,
+            p_quantity: item.quantity,
+            // Merchant explicitly queued it — don't bounce on cooldown at delivery
+            p_override_cooldown: true,
+          })
+          if (error) keep.push(item) // network/transient — retry later
+          else {
+            const result = Array.isArray(data) ? data[0] : data
+            if (result?.success) delivered++
+            else rejected++ // invalid PIN etc. — dropping, retrying won't help
+          }
+        } catch {
+          keep.push(item)
+        }
+        writeQueue([...keep, ...queue.slice(i + 1)])
       }
+    } finally {
+      flushingRef.current = false
     }
 
-    writeQueue(remaining)
     if (delivered > 0) setTodayCount(prev => prev + delivered)
     if (delivered > 0 || rejected > 0) {
       setFlushMsg(
