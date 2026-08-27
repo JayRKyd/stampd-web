@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo } from 'react'
-import { Stamp, Gift, ChevronDown, ChevronUp } from 'lucide-react'
+import { Stamp, Gift, ChevronDown, ChevronUp, Search } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
 import { timeAgo, dateLabel } from '@/lib/timeAgo'
 
@@ -88,6 +88,7 @@ function ActivityRow({ item, isToday, withBorder }: { item: ActivityItem; isToda
 export default function Notifications() {
   const [items, setItems] = useState<ActivityItem[]>([])
   const [filter, setFilter] = useState<Filter>('all')
+  const [search, setSearch] = useState('')
   const [loading, setLoading] = useState(true)
   const [expandedGroups, setExpandedGroups] = useState<Set<string>>(new Set())
   const [expandedHours, setExpandedHours] = useState<Set<number>>(new Set())
@@ -168,23 +169,36 @@ export default function Notifications() {
     load()
   }, [])
 
+  const searching = search.trim().length > 0
+
+  // Search matches the customer, the staff member who stamped, or the reward text
+  const searched = useMemo(() => {
+    if (!searching) return items
+    const q = search.trim().toLowerCase()
+    return items.filter(i =>
+      i.name.toLowerCase().includes(q) ||
+      (i.staffName ?? '').toLowerCase().includes(q) ||
+      i.action.toLowerCase().includes(q)
+    )
+  }, [items, search, searching])
+
   const counts = useMemo(() => ({
-    all: items.length,
-    stamp: items.filter(i => i.type === 'stamp').length,
-    reward: items.filter(i => i.type === 'reward').length,
-  }), [items])
+    all: searched.length,
+    stamp: searched.filter(i => i.type === 'stamp').length,
+    reward: searched.filter(i => i.type === 'reward').length,
+  }), [searched])
 
   const todayItems = useMemo(() => items.filter(i => i.date === 'Today'), [items])
 
   const groups = useMemo(() => {
-    const visible = filter === 'all' ? items : items.filter(i => i.type === filter)
+    const visible = filter === 'all' ? searched : searched.filter(i => i.type === filter)
     const grouped: Record<string, ActivityItem[]> = {}
     for (const item of visible) {
       if (!grouped[item.date]) grouped[item.date] = []
       grouped[item.date].push(item)
     }
     return grouped
-  }, [items, filter])
+  }, [searched, filter])
 
   function toggleGroup(date: string) {
     setExpandedGroups(prev => {
@@ -236,9 +250,9 @@ export default function Notifications() {
         </div>
       )}
 
-      {/* Filter tabs */}
-      {!loading && counts.all > 0 && (
-        <div className="flex gap-1.5 mb-5">
+      {/* Filter tabs + search */}
+      {!loading && items.length > 0 && (
+        <div className="flex flex-wrap items-center gap-1.5 mb-5">
           {FILTERS.map(({ id, label, count }) => (
             <button
               key={id}
@@ -255,6 +269,16 @@ export default function Notifications() {
               </span>
             </button>
           ))}
+          <div className="relative flex-1 min-w-[180px] sm:max-w-[260px] sm:ml-auto">
+            <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" />
+            <input
+              type="text"
+              value={search}
+              onChange={e => setSearch(e.target.value)}
+              placeholder="Search activity…"
+              className="w-full pl-8 pr-3 py-1.5 rounded-lg border border-gray-200 bg-white text-[13px] text-gray-900 placeholder:text-gray-400 focus:outline-none focus:border-brand-500 focus:ring-1 focus:ring-brand-500/20 transition-all"
+            />
+          </div>
         </div>
       )}
 
@@ -270,10 +294,14 @@ export default function Notifications() {
             : <Stamp size={32} className="text-gray-200 mx-auto mb-3" />
           }
           <p className="text-[13px] font-medium text-gray-500">
-            {counts.all === 0 ? 'No activity yet' : `No ${filter === 'stamp' ? 'stamps' : 'rewards'} to show`}
+            {searching
+              ? `No matches for “${search.trim()}”`
+              : counts.all === 0 ? 'No activity yet' : `No ${filter === 'stamp' ? 'stamps' : 'rewards'} to show`}
           </p>
           <p className="text-[12px] text-gray-400 mt-1">
-            {counts.all === 0 ? 'Stamps and rewards will appear here.' : 'Try a different filter.'}
+            {searching
+              ? 'Check the spelling or try a shorter search.'
+              : counts.all === 0 ? 'Stamps and rewards will appear here.' : 'Try a different filter.'}
           </p>
         </div>
       ) : (
@@ -284,8 +312,9 @@ export default function Notifications() {
             const dayRewards = dateItems.filter(i => i.type === 'reward').length
 
             // Busy today → hourly digest: each hour is one scannable line,
-            // latest hour open, older hours expand on demand
-            const useHourly = isToday && dateItems.length >= HOURLY_DIGEST_MIN
+            // latest hour open, older hours expand on demand. A search shows
+            // every match directly — no digest, nothing collapsed.
+            const useHourly = isToday && !searching && dateItems.length >= HOURLY_DIGEST_MIN
 
             let hourGroups: { key: number; items: ActivityItem[]; stamps: number; rewards: number }[] = []
             if (useHourly) {
@@ -306,7 +335,7 @@ export default function Notifications() {
             }
             const latestHourKey = hourGroups[0]?.key
 
-            const isExpanded = isToday || expandedGroups.has(date)
+            const isExpanded = isToday || searching || expandedGroups.has(date)
             const visibleItems = isExpanded ? dateItems : dateItems.slice(0, COLLAPSED_SHOW)
             const hiddenCount = dateItems.length - COLLAPSED_SHOW
             const hiddenRewards = isExpanded ? 0 : dateItems.slice(COLLAPSED_SHOW).filter(i => i.type === 'reward').length

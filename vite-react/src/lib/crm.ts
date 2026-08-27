@@ -41,8 +41,15 @@ export function isNew(c: CrmCustomer): boolean {
   return Date.now() - new Date(c.member_since).getTime() < NEW_WINDOW_DAYS * DAY
 }
 
+// Has an actual unredeemed reward waiting — the drawer shows a Redeem button.
+export function hasPendingReward(c: CrmCustomer): boolean {
+  return c.pending_rewards > 0
+}
+
+// Segment bucket: reward waiting OR within two stamps of one. Broader than
+// hasPendingReward on purpose — these are the customers worth acting on.
 export function isRewardReady(c: CrmCustomer, stampGoal: number): boolean {
-  return c.pending_rewards > 0 || c.current_stamps >= Math.max(1, stampGoal - 2)
+  return hasPendingReward(c) || c.current_stamps >= Math.max(1, stampGoal - 2)
 }
 
 export function isSlipping(c: CrmCustomer): boolean {
@@ -67,7 +74,10 @@ export function inSegment(c: CrmCustomer, segment: SegmentId, stampGoal: number)
 // The single most useful label for a customer, in priority order
 export function primarySegment(c: CrmCustomer, stampGoal: number): { label: string; tone: 'gold' | 'amber' | 'green' | 'gray' } {
   if (isVip(c)) return { label: 'VIP', tone: 'gold' }
-  if (isRewardReady(c, stampGoal)) return { label: 'Reward ready', tone: 'amber' }
+  // "Reward ready" is reserved for an actual unredeemed reward; being a stamp
+  // or two away is "Almost there" — no Redeem button exists yet in that state.
+  if (hasPendingReward(c)) return { label: 'Reward ready', tone: 'amber' }
+  if (isRewardReady(c, stampGoal)) return { label: 'Almost there', tone: 'amber' }
   if (isNew(c)) return { label: 'New member', tone: 'green' }
   if (isSlipping(c)) return { label: 'Slipping away', tone: 'gray' }
   return { label: 'Member', tone: 'gray' }
