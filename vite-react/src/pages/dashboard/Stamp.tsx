@@ -4,7 +4,7 @@ import { CheckCircle2, AlertCircle, Clock, Lock, Users, X, KeyRound, Copy, Check
 import { createClient } from '@/lib/supabase/client'
 import { useMerchantStatus } from '@/lib/merchantStatus'
 
-type State = 'idle' | 'looking' | 'found' | 'not_found' | 'staff_pin' | 'cooldown' | 'issuing' | 'success' | 'error' | 'offline_ready'
+type State = 'idle' | 'looking' | 'found' | 'not_found' | 'staff_pin' | 'cooldown' | 'issuing' | 'success' | 'error' | 'offline_ready' | 'redeeming' | 'redeem_success'
 
 // Offline queue: island wifi drops mid-shift. Stamps entered offline are
 // saved locally and delivered automatically when the connection returns —
@@ -23,6 +23,7 @@ function readQueue(): QueuedStamp[] {
 }
 
 interface Customer {
+  user_id: string
   first_name: string
   last_name: string
   current_stamps: number
@@ -30,6 +31,11 @@ interface Customer {
   reward_title: string
   total_rewards_earned: number
   member_since: string
+}
+
+interface PendingReward {
+  id: string
+  reward_title: string
 }
 
 interface StaffMember {
@@ -66,6 +72,13 @@ export default function Stamp() {
   // Stamp options
   const [quantity, setQuantity] = useState(1)
   const [cooldownMsg, setCooldownMsg] = useState('')
+
+  // Redeem at the counter — counter mode can't reach the Customers page,
+  // so pending rewards must be redeemable right here
+  const [pendingRewards, setPendingRewards] = useState<PendingReward[]>([])
+  const [redeemedTitle, setRedeemedTitle] = useState('')
+  // Which action the staff-PIN gate should continue into ('stamp' default)
+  const redeemIntentRef = useRef<string | null>(null)
 
   // Offline queue
   const [online, setOnline] = useState(() => navigator.onLine)
@@ -297,12 +310,26 @@ export default function Stamp() {
     setCustomer(result as Customer)
     setQuantity(1)
     setState('found')
+
+    // Pending rewards for this customer — redeemable right from the counter
+    setPendingRewards([])
+    if (result.user_id) {
+      const { data: rewards } = await supabase
+        .from('rewards')
+        .select('id, reward_title')
+        .eq('merchant_id', merchantId)
+        .eq('user_id', result.user_id)
+        .eq('status', 'pending')
+        .order('created_at')
+      setPendingRewards(rewards ?? [])
+    }
   }
 
   const startIssue = () => {
     // Staff must be chosen when staff profiles exist (accountability)
     if (staffList.length > 0 && !selectedStaffId) return
     if (requireStaffPin && selectedStaff && !selectedStaff.pin) return
+    redeemIntentRef.current = null
     if (needsStaffPinCheck) {
       setStaffPinInput('')
       setStaffPinError('')
@@ -312,10 +339,48 @@ export default function Stamp() {
     issueStamp(false)
   }
 
+  // Same accountability gate as stamping: staff selected, PIN verified when required
+  const startRedeem = (rewardId: string) => {
+    if (staffList.length > 0 && !selectedStaffId) return
+    if (requireStaffPin && selectedStaff && !selectedStaff.pin) return
+    redeemIntentRef.current = rewardId
+    if (needsStaffPinCheck) {
+      setStaffPinInput('')
+      setStaffPinError('')
+      setState('staff_pin')
+      return
+    }
+    redeemReward(rewardId)
+  }
+
+  const redeemReward = async (rewardId: string) => {
+    if (!isActive) return
+    const reward = pendingRewards.find(r => r.id === rewardId)
+    setState('redeeming')
+    const supabase = createClient()
+    const { data, error } = await supabase.rpc('redeem_customer_reward', { p_reward_id: rewardId })
+    if (error || !data?.ok) {
+      setErrorMsg(
+        data?.error === 'not_pending' ? 'This reward was already redeemed.'
+        : data?.error === 'merchant_not_approved' ? 'Your account must be approved before you can redeem rewards.'
+        : 'Could not redeem the reward — check your connection and try again.')
+      setState('error')
+      return
+    }
+    setPendingRewards(prev => prev.filter(r => r.id !== rewardId))
+    setRedeemedTitle(reward?.reward_title ?? 'Reward')
+    setState('redeem_success')
+  }
+
   const verifyStaffPin = () => {
     if (!selectedStaff) return
     if (staffPinInput === selectedStaff.pin) {
       setVerifiedStaffId(selectedStaff.id)
+      if (redeemIntentRef.current) {
+        redeemReward(redeemIntentRef.current)
+        redeemIntentRef.current = null
+        return
+      }
       // Offline there is no customer lookup — the verified stamp goes to
       // the queue instead of the RPC
       if (!navigator.onLine) pushToQueue()
@@ -381,6 +446,9 @@ export default function Stamp() {
     setErrorMsg('')
     setCooldownMsg('')
     setQuantity(1)
+    setPendingRewards([])
+    setRedeemedTitle('')
+    redeemIntentRef.current = null
     setState('idle')
   }
 
@@ -742,6 +810,30 @@ export default function Stamp() {
             </div>
           </div>
 
+          {/* Pending rewards — redeemable here so counter mode never needs the Customers page */}
+          {pendingRewards.length > 0 && (
+            <div className="mb-5 border border-accent-400 bg-accent-50 rounded-xl p-4">
+              <p className="text-[11px] font-bold text-accent-500 uppercase tracking-wide mb-2">
+                Ready to redeem
+              </p>
+              <div className="flex flex-col gap-2">
+                {pendingRewards.map(r => (
+                  <div key={r.id} className="flex items-center gap-3">
+                    <Gift size={16} className="text-accent-500 shrink-0" />
+                    <span className="flex-1 text-[13px] font-semibold text-gray-900 truncate">{r.reward_title}</span>
+                    <button
+                      onClick={() => startRedeem(r.id)}
+                      disabled={staffList.length > 0 && !selectedStaffId}
+                      className="px-4 py-2 rounded-lg bg-accent-400 text-[13px] font-semibold text-white hover:bg-accent-500 transition-colors disabled:opacity-50 shrink-0"
+                    >
+                      Redeem
+                    </button>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
           {staffList.length > 0 && !selectedStaffId && (
             <p className="text-[12px] text-amber-600 bg-amber-50 rounded-lg px-3 py-2.5 mb-3">
               Select who's stamping above first.
@@ -808,7 +900,7 @@ export default function Stamp() {
               disabled={staffPinInput.length < 4}
               className="flex-[2] py-3 rounded-xl bg-brand-500 text-[14px] font-semibold text-white hover:bg-brand-600 transition-colors disabled:opacity-50"
             >
-              Confirm & Stamp
+              {redeemIntentRef.current ? 'Confirm & Redeem' : 'Confirm & Stamp'}
             </button>
           </div>
         </div>
@@ -841,13 +933,38 @@ export default function Stamp() {
         </div>
       )}
 
-      {/* Issuing */}
-      {state === 'issuing' && (
+      {/* Issuing / redeeming */}
+      {(state === 'issuing' || state === 'redeeming') && (
         <div className="bg-white border border-gray-200 rounded-2xl p-10 text-center">
           <div className="inline-flex h-12 w-12 items-center justify-center mb-3">
             <div className="w-7 h-7 border-2 border-brand-500 border-t-transparent rounded-full animate-spin" />
           </div>
-          <p className="text-[14px] text-gray-500">Issuing stamp…</p>
+          <p className="text-[14px] text-gray-500">{state === 'redeeming' ? 'Redeeming reward…' : 'Issuing stamp…'}</p>
+        </div>
+      )}
+
+      {/* Redeemed — readable from arm's length, mirrors the stamp success card */}
+      {state === 'redeem_success' && customer && (
+        <div className="bg-white border border-accent-400 rounded-2xl p-8 text-center">
+          <div className="inline-flex h-16 w-16 items-center justify-center rounded-full mb-4 bg-accent-50">
+            <Gift size={30} className="text-accent-500" />
+          </div>
+          <h3 className="text-[20px] font-bold text-gray-900 tracking-[-0.02em] mb-1">Reward Redeemed</h3>
+          <p className="text-[14px] text-gray-600 mb-1">
+            {customer.first_name} {customer.last_name} · <span className="font-semibold text-gray-900">{redeemedTitle}</span>
+          </p>
+          <p className="text-[13px] text-gray-500">Customer notified in their app.</p>
+          {selectedStaff && (
+            <p className="text-[12px] text-gray-400 mt-1">by {selectedStaff.name}</p>
+          )}
+
+          <button
+            onClick={handleReset}
+            className="mt-6 w-full flex items-center justify-center gap-2 py-3 rounded-xl bg-brand-500 text-[14px] font-semibold text-white hover:bg-brand-600 transition-colors focus-ring"
+          >
+            <StampIcon size={16} />
+            Next Customer
+          </button>
         </div>
       )}
 
