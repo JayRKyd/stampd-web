@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Trash2, Lock, Upload, X, Monitor, Smartphone, Share } from 'lucide-react'
+import { Trash2, Lock, KeyRound, Upload, X, Monitor, Smartphone, Share } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
 import { BUSINESS_CATEGORIES, normalizeCategory } from '@/lib/categories'
 import { resizeImage } from '@/lib/resizeImage'
@@ -65,6 +65,33 @@ export default function Settings() {
   const [addingStaff, setAddingStaff] = useState(false)
   const [staffError, setStaffError] = useState('')
   const [firstStaffAdded, setFirstStaffAdded] = useState(false)
+
+  // PIN reset: PINs are hashed, so a forgotten one can't be shown — the
+  // owner sets a fresh one here instead of removing and re-adding the person
+  const [resetPinId, setResetPinId] = useState<string | null>(null)
+  const [resetPinValue, setResetPinValue] = useState('')
+  const [savingResetPin, setSavingResetPin] = useState(false)
+
+  const handleResetPin = async (id: string) => {
+    if (resetPinValue.length < 4 || savingResetPin) return
+    setSavingResetPin(true)
+    setStaffError('')
+    const supabase = createClient()
+    const { data, error } = await supabase
+      .from('staff')
+      .update({ pin: resetPinValue })
+      .eq('id', id)
+      .select('id, name, has_pin, is_active')
+      .single()
+    setSavingResetPin(false)
+    if (error || !data) {
+      setStaffError(error?.message ?? 'Could not update the PIN')
+      return
+    }
+    setStaff(prev => prev.map(s => (s.id === id ? data : s)))
+    setResetPinId(null)
+    setResetPinValue('')
+  }
   const [requirePin, setRequirePin] = useState(false)
   const [cooldown, setCooldown] = useState(5)
   const [savingStamping, setSavingStamping] = useState(false)
@@ -405,32 +432,67 @@ export default function Settings() {
             {staff.length > 0 && (
               <div className="divide-y divide-gray-100">
                 {staff.map(s => (
-                  <div key={s.id} className="flex items-center gap-3 px-5 py-3">
-                    <div className="h-8 w-8 rounded-full bg-brand-100 flex items-center justify-center shrink-0">
-                      <span className="text-[12px] font-semibold text-brand-600">
-                        {s.name[0]?.toUpperCase()}
-                      </span>
-                    </div>
-                    <p className="flex-1 text-[13px] font-medium text-gray-900 truncate">{s.name}</p>
-                    {s.has_pin ? (
-                      <span className="flex items-center gap-1 text-[11px] text-gray-400 bg-gray-50 border border-gray-100 rounded-md px-2 py-1">
-                        <Lock size={11} /> PIN set
-                      </span>
-                    ) : requirePin ? (
-                      <span
-                        className="text-[11px] text-amber-700 bg-amber-50 border border-amber-200 rounded-md px-2 py-1"
-                        title='This person cannot stamp while "Require staff PIN" is on. Remove and re-add them with a PIN.'
+                  <div key={s.id}>
+                    <div className="flex items-center gap-3 px-5 py-3">
+                      <div className="h-8 w-8 rounded-full bg-brand-100 flex items-center justify-center shrink-0">
+                        <span className="text-[12px] font-semibold text-brand-600">
+                          {s.name[0]?.toUpperCase()}
+                        </span>
+                      </div>
+                      <p className="flex-1 text-[13px] font-medium text-gray-900 truncate">{s.name}</p>
+                      {s.has_pin ? (
+                        <span className="flex items-center gap-1 text-[11px] text-gray-400 bg-gray-50 border border-gray-100 rounded-md px-2 py-1">
+                          <Lock size={11} /> PIN set
+                        </span>
+                      ) : requirePin ? (
+                        <span
+                          className="text-[11px] text-amber-700 bg-amber-50 border border-amber-200 rounded-md px-2 py-1"
+                          title='This person cannot stamp while "Require staff PIN" is on. Set a PIN for them below.'
+                        >
+                          No PIN — can't stamp
+                        </span>
+                      ) : null}
+                      <button
+                        onClick={() => { setResetPinId(resetPinId === s.id ? null : s.id); setResetPinValue('') }}
+                        className="text-gray-300 hover:text-brand-600 transition-colors p-1.5"
+                        title={s.has_pin ? 'Reset PIN (e.g. if forgotten)' : 'Set a PIN'}
                       >
-                        No PIN — can't stamp
-                      </span>
-                    ) : null}
-                    <button
-                      onClick={() => handleRemoveStaff(s.id)}
-                      className="text-gray-300 hover:text-red-500 transition-colors p-1.5"
-                      title="Remove staff member"
-                    >
-                      <Trash2 size={15} />
-                    </button>
+                        <KeyRound size={15} />
+                      </button>
+                      <button
+                        onClick={() => handleRemoveStaff(s.id)}
+                        className="text-gray-300 hover:text-red-500 transition-colors p-1.5"
+                        title="Remove staff member"
+                      >
+                        <Trash2 size={15} />
+                      </button>
+                    </div>
+                    {resetPinId === s.id && (
+                      <div className="flex items-center gap-2 px-5 pb-3 pl-16">
+                        <input
+                          type="password"
+                          inputMode="numeric"
+                          value={resetPinValue}
+                          onChange={(e) => setResetPinValue(e.target.value.replace(/\D/g, '').slice(0, 4))}
+                          placeholder={s.has_pin ? 'New 4-digit PIN' : '4-digit PIN'}
+                          autoFocus
+                          className="w-36 px-3 py-2 rounded-lg border border-gray-200 bg-gray-50 text-[13px] focus:outline-none focus:border-brand-500 focus:ring-1 focus:ring-brand-500/20 transition-all placeholder:text-gray-300"
+                        />
+                        <button
+                          onClick={() => handleResetPin(s.id)}
+                          disabled={resetPinValue.length < 4 || savingResetPin}
+                          className="px-3 py-2 rounded-lg bg-brand-500 text-[12px] font-semibold text-white hover:bg-brand-600 transition-colors disabled:opacity-50"
+                        >
+                          {savingResetPin ? 'Saving…' : s.has_pin ? 'Reset PIN' : 'Set PIN'}
+                        </button>
+                        <button
+                          onClick={() => { setResetPinId(null); setResetPinValue('') }}
+                          className="px-3 py-2 rounded-lg border border-gray-200 text-[12px] font-medium text-gray-600 hover:bg-gray-50 transition-colors"
+                        >
+                          Cancel
+                        </button>
+                      </div>
+                    )}
                   </div>
                 ))}
               </div>
