@@ -438,6 +438,19 @@ export default function Stamp() {
     setStampsAfterIssue(updatedStamps)
     setTodayCount(prev => prev + 1)
     setState('success')
+
+    // A card-completing stamp just created a pending reward — refetch so the
+    // success screen can offer to redeem it on the spot
+    if (updatedStamps >= customer.total_required && customer.user_id) {
+      const { data: rewards } = await supabase
+        .from('rewards')
+        .select('id, reward_title')
+        .eq('merchant_id', merchantId)
+        .eq('user_id', customer.user_id)
+        .eq('status', 'pending')
+        .order('created_at')
+      setPendingRewards(rewards ?? [])
+    }
   }
 
   const handleReset = () => {
@@ -1005,9 +1018,25 @@ export default function Stamp() {
             <p className="text-[12px] text-gray-400">by {selectedStaff.name}</p>
           )}
 
+          {/* Customer is standing right here — let staff hand it over and mark
+              it in one tap instead of re-entering the PIN */}
+          {rewardEarned && pendingRewards.length > 0 && (
+            <button
+              onClick={() => startRedeem(pendingRewards[pendingRewards.length - 1].id)}
+              className="mt-6 w-full flex items-center justify-center gap-2 py-3 rounded-xl bg-accent-500 text-[14px] font-semibold text-white hover:bg-accent-400 transition-colors focus-ring"
+            >
+              <Gift size={16} />
+              Mark as Redeemed
+            </button>
+          )}
+
           <button
             onClick={handleReset}
-            className="mt-6 w-full flex items-center justify-center gap-2 py-3 rounded-xl bg-brand-500 text-[14px] font-semibold text-white hover:bg-brand-600 transition-colors focus-ring"
+            className={`w-full flex items-center justify-center gap-2 py-3 rounded-xl text-[14px] font-semibold transition-colors focus-ring ${
+              rewardEarned && pendingRewards.length > 0
+                ? 'mt-2 border border-gray-200 text-gray-600 hover:bg-gray-50'
+                : 'mt-6 bg-brand-500 text-white hover:bg-brand-600'
+            }`}
           >
             <StampIcon size={16} />
             Stamp Another
