@@ -189,7 +189,7 @@ export default function Card() {
   const handleLogoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
     if (file) {
-      const resized = await resizeImage(file, 512)
+      const resized = await resizeImage(file, 512, { trimWhitespace: true })
       setLogoFile(resized)
       const reader = new FileReader()
       reader.onloadend = () => setLogo(reader.result as string)

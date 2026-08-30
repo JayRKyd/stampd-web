@@ -369,7 +369,7 @@ export default function Onboarding() {
     if (!file) return
     // Downscale camera-roll originals client-side; only reject if something
     // is still enormous after resizing (e.g. an undecodable format)
-    const resized = await resizeImage(file, 512)
+    const resized = await resizeImage(file, 512, { trimWhitespace: true })
     if (resized.size > 2 * 1024 * 1024) {
       setError('Photo is too large — try a smaller image.')
       e.target.value = ''
