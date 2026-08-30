@@ -41,7 +41,9 @@ interface PendingReward {
 interface StaffMember {
   id: string
   name: string
-  pin: string | null
+  // PINs are bcrypt-hashed server-side and never sent to the client;
+  // verification goes through the verify_staff_pin RPC
+  has_pin: boolean
 }
 
 const LAST_STAFF_KEY = 'stampd_last_staff_id'
@@ -68,6 +70,7 @@ export default function Stamp() {
   const [verifiedStaffId, setVerifiedStaffId] = useState<string | null>(null)
   const [staffPinInput, setStaffPinInput] = useState('')
   const [staffPinError, setStaffPinError] = useState('')
+  const [verifyingPin, setVerifyingPin] = useState(false)
 
   // Stamp options
   const [quantity, setQuantity] = useState(1)
@@ -109,7 +112,7 @@ export default function Stamp() {
 
       const { data: staff } = await supabase
         .from('staff')
-        .select('id, name, pin')
+        .select('id, name, has_pin')
         .eq('merchant_id', merchant.id)
         .eq('is_active', true)
         .order('created_at')
@@ -120,7 +123,7 @@ export default function Stamp() {
       // Pre-select last-used staff (or the only one) so the common case is
       // zero taps. When PINs are required, staff without one can't stamp —
       // never auto-select them.
-      const selectable = merchant.require_staff_pin ? list.filter(s => s.pin) : list
+      const selectable = merchant.require_staff_pin ? list.filter(s => s.has_pin) : list
       const remembered = localStorage.getItem(LAST_STAFF_KEY)
       if (remembered && selectable.some(s => s.id === remembered)) {
         setSelectedStaffId(remembered)
@@ -236,7 +239,7 @@ export default function Stamp() {
     // "Require staff PIN" means require: a staff member with no PIN can't
     // be stamped under, or the gate would have a permanently open door
     const target = staffList.find(s => s.id === id)
-    if (requireStaffPin && target && !target.pin) return
+    if (requireStaffPin && target && !target.has_pin) return
     setSelectedStaffId(id)
     localStorage.setItem(LAST_STAFF_KEY, id)
     setStaffPinInput('')
@@ -250,13 +253,13 @@ export default function Stamp() {
 
   const selectedStaff = staffList.find(s => s.id === selectedStaffId) ?? null
   const needsStaffPinCheck =
-    requireStaffPin && !!selectedStaff?.pin && verifiedStaffId !== selectedStaffId
+    requireStaffPin && !!selectedStaff?.has_pin && verifiedStaffId !== selectedStaffId
 
   // Offline queue entry point — the staff gate applies exactly as it does
   // online; losing wifi must not turn the PIN requirement off
   const queueStamp = () => {
     if (staffList.length > 0 && !selectedStaffId) return
-    if (requireStaffPin && selectedStaff && !selectedStaff.pin) return
+    if (requireStaffPin && selectedStaff && !selectedStaff.has_pin) return
     if (needsStaffPinCheck) {
       setStaffPinInput('')
       setStaffPinError('')
@@ -328,7 +331,7 @@ export default function Stamp() {
   const startIssue = () => {
     // Staff must be chosen when staff profiles exist (accountability)
     if (staffList.length > 0 && !selectedStaffId) return
-    if (requireStaffPin && selectedStaff && !selectedStaff.pin) return
+    if (requireStaffPin && selectedStaff && !selectedStaff.has_pin) return
     redeemIntentRef.current = null
     if (needsStaffPinCheck) {
       setStaffPinInput('')
@@ -342,7 +345,7 @@ export default function Stamp() {
   // Same accountability gate as stamping: staff selected, PIN verified when required
   const startRedeem = (rewardId: string) => {
     if (staffList.length > 0 && !selectedStaffId) return
-    if (requireStaffPin && selectedStaff && !selectedStaff.pin) return
+    if (requireStaffPin && selectedStaff && !selectedStaff.has_pin) return
     redeemIntentRef.current = rewardId
     if (needsStaffPinCheck) {
       setStaffPinInput('')
@@ -358,7 +361,10 @@ export default function Stamp() {
     const reward = pendingRewards.find(r => r.id === rewardId)
     setState('redeeming')
     const supabase = createClient()
-    const { data, error } = await supabase.rpc('redeem_customer_reward', { p_reward_id: rewardId })
+    const { data, error } = await supabase.rpc('redeem_customer_reward', {
+      p_reward_id: rewardId,
+      p_staff_id: selectedStaffId,
+    })
     if (error || !data?.ok) {
       setErrorMsg(
         data?.error === 'not_pending' ? 'This reward was already redeemed.'
@@ -372,9 +378,19 @@ export default function Stamp() {
     setState('redeem_success')
   }
 
-  const verifyStaffPin = () => {
-    if (!selectedStaff) return
-    if (staffPinInput === selectedStaff.pin) {
+  const verifyStaffPin = async () => {
+    if (!selectedStaff || verifyingPin) return
+    setVerifyingPin(true)
+    const { data: pinOk, error: pinErr } = await createClient().rpc('verify_staff_pin', {
+      p_staff_id: selectedStaff.id,
+      p_pin: staffPinInput,
+    })
+    setVerifyingPin(false)
+    if (pinErr) {
+      setStaffPinError('Could not verify the PIN — check your connection and try again.')
+      return
+    }
+    if (pinOk === true) {
       setVerifiedStaffId(selectedStaff.id)
       if (redeemIntentRef.current) {
         redeemReward(redeemIntentRef.current)
@@ -591,7 +607,7 @@ export default function Stamp() {
           <p className="text-[11px] font-semibold text-gray-400 uppercase tracking-wider mb-2">Stamping as</p>
           <div className="flex gap-2 flex-wrap">
             {staffList.map(s => {
-              const blocked = requireStaffPin && !s.pin
+              const blocked = requireStaffPin && !s.has_pin
               return (
                 <button
                   key={s.id}
@@ -607,7 +623,7 @@ export default function Stamp() {
                   }`}
                 >
                   {s.name}
-                  {requireStaffPin && s.pin && (
+                  {requireStaffPin && s.has_pin && (
                     <Lock size={11} className={`inline ml-1.5 -mt-0.5 ${selectedStaffId === s.id ? 'opacity-80' : 'opacity-50'}`} />
                   )}
                   {blocked && <span className="ml-1.5 text-[10px] font-medium">No PIN</span>}
@@ -615,7 +631,7 @@ export default function Stamp() {
               )
             })}
           </div>
-          {requireStaffPin && staffList.some(s => !s.pin) && (
+          {requireStaffPin && staffList.some(s => !s.has_pin) && (
             <p className="text-[11px] text-amber-700 mt-2">
               Greyed-out names have no PIN and can't stamp while "Require staff PIN" is on —{' '}
               <Link to="/settings" className="font-semibold underline">add PINs in Settings</Link>.
@@ -910,10 +926,10 @@ export default function Stamp() {
             </button>
             <button
               onClick={verifyStaffPin}
-              disabled={staffPinInput.length < 4}
+              disabled={staffPinInput.length < 4 || verifyingPin}
               className="flex-[2] py-3 rounded-xl bg-brand-500 text-[14px] font-semibold text-white hover:bg-brand-600 transition-colors disabled:opacity-50"
             >
-              {redeemIntentRef.current ? 'Confirm & Redeem' : 'Confirm & Stamp'}
+              {verifyingPin ? 'Checking…' : redeemIntentRef.current ? 'Confirm & Redeem' : 'Confirm & Stamp'}
             </button>
           </div>
         </div>

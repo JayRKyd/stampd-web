@@ -9,7 +9,8 @@ import { enterKioskMode } from '@/lib/kioskMode'
 interface StaffMember {
   id: string
   name: string
-  pin: string | null
+  // presence only — PINs are hashed server-side and never sent to the client
+  has_pin: boolean
   is_active: boolean
 }
 
@@ -97,7 +98,7 @@ export default function Settings() {
 
         const { data: staffRows } = await supabase
           .from('staff')
-          .select('id, name, pin, is_active')
+          .select('id, name, has_pin, is_active')
           .eq('merchant_id', merchant.id)
           .eq('is_active', true)
           .order('created_at')
@@ -185,7 +186,7 @@ export default function Settings() {
     const { data, error } = await supabase
       .from('staff')
       .insert({ merchant_id: merchantId, name, pin: newStaffPin || null })
-      .select('id, name, pin, is_active')
+      .select('id, name, has_pin, is_active')
       .single()
     setAddingStaff(false)
     if (error || !data) {
@@ -411,7 +412,7 @@ export default function Settings() {
                       </span>
                     </div>
                     <p className="flex-1 text-[13px] font-medium text-gray-900 truncate">{s.name}</p>
-                    {s.pin ? (
+                    {s.has_pin ? (
                       <span className="flex items-center gap-1 text-[11px] text-gray-400 bg-gray-50 border border-gray-100 rounded-md px-2 py-1">
                         <Lock size={11} /> PIN set
                       </span>
