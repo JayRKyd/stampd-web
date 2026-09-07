@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Trash2, Lock, KeyRound, Upload, X, Monitor, Smartphone, Share } from 'lucide-react'
+import { Trash2, Lock, KeyRound, Upload, X, Monitor, Smartphone, Share, Plug, AlertTriangle } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
 import { BUSINESS_CATEGORIES, normalizeCategory } from '@/lib/categories'
 import { resizeImage } from '@/lib/resizeImage'
@@ -66,6 +66,26 @@ export default function Settings() {
   const [staffError, setStaffError] = useState('')
   const [firstStaffAdded, setFirstStaffAdded] = useState(false)
 
+  // POS connection (Lightspeed): status display + connect button
+  const [posConn, setPosConn] = useState<{ domain_prefix: string; status: string } | null>(null)
+  const [posConnecting, setPosConnecting] = useState(false)
+  const [posError, setPosError] = useState('')
+
+  const handleConnectPos = async () => {
+    if (posConnecting) return
+    setPosConnecting(true)
+    setPosError('')
+    const supabase = createClient()
+    const { data, error } = await supabase.functions.invoke('pos-connect-start')
+    if (error || !data?.url) {
+      setPosConnecting(false)
+      setPosError('Could not start the connection — try again in a moment.')
+      return
+    }
+    // Off to Lightspeed's approval screen; their callback finishes the link
+    window.location.href = data.url
+  }
+
   // PIN reset: PINs are hashed, so a forgotten one can't be shown — the
   // owner sets a fresh one here instead of removing and re-adding the person
   const [resetPinId, setResetPinId] = useState<string | null>(null)
@@ -130,6 +150,13 @@ export default function Settings() {
           .eq('is_active', true)
           .order('created_at')
         setStaff(staffRows ?? [])
+
+        const { data: pos } = await supabase
+          .from('pos_connections')
+          .select('domain_prefix, status')
+          .eq('merchant_id', merchant.id)
+          .maybeSingle()
+        setPosConn(pos ?? null)
       }
       setLoading(false)
     }
@@ -656,6 +683,78 @@ export default function Settings() {
                 <Lock size={13} /> Turn on counter mode
               </button>
             </div>
+          </div>
+        </section>
+
+        {/* ── Point of sale ── */}
+        <section className="grid grid-cols-1 lg:grid-cols-3 gap-4 lg:gap-8">
+          <div>
+            <h2 className="text-[15px] font-semibold text-gray-900">Point of sale</h2>
+            <p className="text-[12px] text-gray-500 mt-1 leading-relaxed">
+              Connect your register and sales stamp customers automatically —
+              your cashier just types their Stampd PIN into the sale note.
+            </p>
+          </div>
+
+          <div className="lg:col-span-2 bg-white border border-gray-200 rounded-xl p-5">
+            {posConn && posConn.status === 'connected' ? (
+              <div className="flex items-center gap-4">
+                <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-green-100 text-green-700 shrink-0">
+                  <Plug size={18} strokeWidth={1.75} />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-[13px] font-medium text-gray-900">Lightspeed connected</p>
+                  <p className="text-[12px] text-gray-500 mt-0.5">
+                    Store <span className="font-medium text-gray-700">{posConn.domain_prefix}</span> — completed
+                    sales with a customer PIN in the note earn stamps automatically.
+                  </p>
+                </div>
+              </div>
+            ) : posConn && posConn.status === 'needs_reconnect' ? (
+              <div className="flex items-start gap-4">
+                <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-amber-100 text-amber-700 shrink-0">
+                  <AlertTriangle size={18} strokeWidth={1.75} />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-[13px] font-medium text-gray-900">Your register got disconnected</p>
+                  <p className="text-[12px] text-gray-500 mt-1 leading-relaxed">
+                    Stamps from your Lightspeed sales are paused. Reconnect to pick
+                    up where you left off.
+                  </p>
+                  <button
+                    onClick={handleConnectPos}
+                    disabled={posConnecting}
+                    className="mt-3 flex items-center gap-1.5 px-4 py-2 rounded-lg bg-brand-500 text-[13px] font-semibold text-white hover:bg-brand-600 transition-colors disabled:opacity-50"
+                  >
+                    <Plug size={13} /> {posConnecting ? 'Opening Lightspeed…' : 'Reconnect Lightspeed'}
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <div className="flex items-start gap-4">
+                <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-brand-50 text-brand-600 shrink-0">
+                  <Plug size={18} strokeWidth={1.75} />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-[13px] font-medium text-gray-900">Connect Lightspeed Retail (X-Series)</p>
+                  <ul className="text-[12px] text-gray-500 mt-1.5 space-y-1 leading-relaxed">
+                    <li>· Ring up sales like normal — type the customer's PIN into the sale note</li>
+                    <li>· The stamp lands on their phone before they leave the counter</li>
+                    <li>· Stampd only reads completed sales; it never touches your products or prices</li>
+                  </ul>
+                  {posError && (
+                    <p className="text-[12px] text-red-600 bg-red-50 rounded-lg px-3 py-2.5 mt-3">{posError}</p>
+                  )}
+                  <button
+                    onClick={handleConnectPos}
+                    disabled={posConnecting}
+                    className="mt-3 flex items-center gap-1.5 px-4 py-2 rounded-lg bg-brand-500 text-[13px] font-semibold text-white hover:bg-brand-600 transition-colors disabled:opacity-50"
+                  >
+                    <Plug size={13} /> {posConnecting ? 'Opening Lightspeed…' : 'Connect Lightspeed'}
+                  </button>
+                </div>
+              </div>
+            )}
           </div>
         </section>
 
