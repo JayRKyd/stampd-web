@@ -257,8 +257,10 @@ begin
   select * into v_conn from public.pos_connections
   where provider = v_event.provider and domain_prefix = v_event.domain_prefix and status = 'connected';
   if not found or v_conn.merchant_id is null then
-    update public.pos_events set processed = true, processing_result = 'no_merchant_link' where id = p_event_id;
-    return jsonb_build_object('ok', true, 'result', 'no_merchant_link');
+    -- NOT marked processed: poller retries every 5 minutes until the store
+    -- is linked to a merchant, then this event stamps automatically.
+    update public.pos_events set processing_result = 'awaiting_merchant_link' where id = p_event_id;
+    return jsonb_build_object('ok', true, 'result', 'awaiting_merchant_link');
   end if;
 
   -- A completed sale backs this stamp, so the anti-double-tap cooldown
