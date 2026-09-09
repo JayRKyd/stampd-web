@@ -2,10 +2,10 @@ import { useEffect, useState, useRef } from 'react'
 import { useNavigate, Link } from 'react-router-dom'
 import {
   Store, User, CreditCard, Smartphone, Clock, Check, Gift,
-  MessageCircle, Apple, Play, Scissors,
+  MessageCircle, Scissors, Lock,
 } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
-import { whatsappHref, contactHref, APP_STORE_URL, PLAY_STORE_URL } from '@/lib/support'
+import { whatsappHref, contactHref } from '@/lib/support'
 import { BUSINESS_CATEGORIES, INDIVIDUAL_TRADES, normalizeCategory } from '@/lib/categories'
 import { getStampIcon } from '@/lib/stampIcons'
 import { shade, isLightColor } from '@/lib/cardPreview'
@@ -61,7 +61,7 @@ const inputCls = "w-full px-3 py-2.5 rounded-xl border border-gray-200 bg-gray-5
 
 // ─── Step indicator ───────────────────────────────────────────
 function StepBar({ current }: { current: number }) {
-  const steps = ['Welcome', 'Your card', 'Profile', 'Download']
+  const steps = ['Welcome', 'Your card', 'Profile', 'Go live']
   return (
     <div className="mb-10">
       <div className="flex items-center justify-between">
@@ -569,9 +569,6 @@ export default function Onboarding() {
 
   const isIndividual = merchant.merchant_type === 'individual'
   const categories = isIndividual ? INDIVIDUAL_TRADES : BUSINESS_CATEGORIES
-  const trialDays = merchant.trial_ends_at
-    ? Math.max(0, Math.ceil((new Date(merchant.trial_ends_at).getTime() - Date.now()) / 86400000))
-    : 90
 
   // ── Render ────────────────────────────────────────────────────
   return (
@@ -597,7 +594,7 @@ export default function Onboarding() {
                   Welcome, {merchant.business_name ?? 'there'}
                 </h1>
                 <p className="text-[13px] text-gray-500">
-                  {isIndividual ? merchant.trade ?? 'Professional' : 'Business'} · Free trial · {trialDays} days remaining
+                  {isIndividual ? merchant.trade ?? 'Professional' : 'Business'} · Free to set up
                 </p>
               </div>
             </div>
@@ -658,8 +655,8 @@ export default function Onboarding() {
                   done: hasProfile, badge: hasProfile ? 'Done' : 'To do',
                 },
                 {
-                  icon: Smartphone, title: 'Download Stampd Business',
-                  sub: 'Issue stamps at your counter from your phone',
+                  icon: Smartphone, title: 'Stamp from any device',
+                  sub: 'The Stamp page runs in the browser on your phone, tablet or computer',
                   done: false, badge: 'To do',
                 },
                 {
@@ -708,9 +705,9 @@ export default function Onboarding() {
             <div className="bg-white border border-gray-200 rounded-2xl p-5">
               <p className="text-[11px] font-semibold text-gray-400 uppercase tracking-wider mb-3">Your plan</p>
               <p className="text-[30px] font-black text-gray-900">Free</p>
-              <p className="text-[12px] text-gray-500 mt-1 mb-4">90-day trial · no credit card needed</p>
+              <p className="text-[12px] text-gray-500 mt-1 mb-4">No credit card needed — billing starts when your card goes live</p>
               <div className="space-y-2">
-                {['Unlimited stamps', 'Loyalty card builder', 'Web dashboard', 'Mobile app'].map(f => (
+                {['Unlimited stamps', 'Loyalty card builder', 'Web dashboard', 'Counter mode'].map(f => (
                   <div key={f} className="flex items-center gap-2 text-[12px] text-gray-500">
                     <Check size={13} className="text-green-600 shrink-0" /> {f}
                   </div>
@@ -1136,42 +1133,36 @@ export default function Onboarding() {
               </div>
             )}
             <div>
-              <h2 className="text-[20px] font-bold text-gray-900">Download the app</h2>
+              <h2 className="text-[20px] font-bold text-gray-900">Stamp from any device</h2>
               <p className="text-[13px] text-gray-500 mt-1">
-                Install Stampd Business on your phone to issue stamps at the counter. Your web dashboard handles everything else.
+                No app to install. The Stamp page runs in the browser on whatever lives at your counter — a phone, a tablet or a computer.
               </p>
             </div>
 
             <div className="grid grid-cols-2 gap-4">
               {[
-                { icon: Apple, name: 'App Store', sub: 'iPhone & iPad', href: APP_STORE_URL },
-                { icon: Play, name: 'Google Play', sub: 'Android', href: PLAY_STORE_URL },
-              ].map(({ icon: Icon, name, sub, href }) => {
-                const available = !!href
-                const Wrapper = available ? 'a' : 'div'
-                return (
-                  <Wrapper
-                    key={name}
-                    {...(available ? { href, target: '_blank', rel: 'noopener noreferrer' } : {})}
-                    className={`border border-gray-200 rounded-2xl p-5 flex flex-col items-center gap-3 text-center transition-colors ${
-                      available ? 'hover:bg-gray-50' : 'opacity-70'
-                    }`}
-                  >
-                    <div className="w-12 h-12 rounded-2xl bg-gray-100 border border-gray-200 flex items-center justify-center text-gray-700">
-                      <Icon size={22} strokeWidth={1.5} />
-                    </div>
-                    <div>
-                      <p className="text-[13px] font-bold text-gray-900">{name}</p>
-                      <p className="text-[12px] text-gray-500">{sub}</p>
-                    </div>
-                    <span className={`w-full py-2 rounded-xl border border-gray-200 text-[12px] font-semibold ${
-                      available ? 'text-gray-700 hover:bg-gray-100' : 'text-gray-400'
-                    }`}>
-                      {available ? 'Download' : 'Coming soon'}
-                    </span>
-                  </Wrapper>
-                )
-              })}
+                {
+                  icon: Smartphone, name: 'At the counter',
+                  sub: 'Open Issue Stamp, type the customer’s 6-digit PIN, done. About five seconds per stamp.',
+                },
+                {
+                  icon: Lock, name: 'Counter mode',
+                  sub: 'Sharing a device with staff? Lock it to the Stamp page from Settings so the rest of your dashboard stays private.',
+                },
+              ].map(({ icon: Icon, name, sub }) => (
+                <div
+                  key={name}
+                  className="border border-gray-200 rounded-2xl p-5 flex flex-col items-center gap-3 text-center"
+                >
+                  <div className="w-12 h-12 rounded-2xl bg-gray-100 border border-gray-200 flex items-center justify-center text-gray-700">
+                    <Icon size={22} strokeWidth={1.5} />
+                  </div>
+                  <div>
+                    <p className="text-[13px] font-bold text-gray-900">{name}</p>
+                    <p className="text-[12px] text-gray-500 leading-relaxed mt-1">{sub}</p>
+                  </div>
+                </div>
+              ))}
             </div>
 
             <div className="border-t border-gray-100 pt-5">

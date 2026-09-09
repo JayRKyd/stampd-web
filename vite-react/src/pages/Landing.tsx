@@ -14,7 +14,7 @@ const FAQS = [
   },
   {
     q: 'What if my favourite spot isn\'t on Stampd yet?',
-    a: 'Tell them about us! Any business, or independent pro, can join in about five minutes, and there\'s a free 90-day trial waiting for them.',
+    a: 'Tell them about us! Any business, or independent pro, can join in about five minutes, and setup is free — we even build their card before they pay a thing.',
   },
   {
     q: 'Do I need internet at the counter?',
