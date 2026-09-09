@@ -241,18 +241,53 @@ export default function DashboardLayout() {
 
         {/* Nav */}
         <nav className="flex-1 overflow-y-auto px-3 pt-2 pb-4">
+          {/* Primary action: stamping is the merchant's whole day, so it
+              sits alone above the nav, gold, separated by a divider */}
+          {(() => {
+            const lockedBySetup = !setupComplete
+            const lockedByApproval = setupComplete && !isActive
+            const locked = lockedBySetup || lockedByApproval
+            return locked ? (
+              <div
+                title={lockedBySetup ? 'Finish setup to unlock' : 'Available after your account is approved'}
+                className="flex items-center gap-2.5 rounded-md px-2.5 py-2 text-[13px] font-semibold text-gray-300 bg-gray-50 border border-gray-200 cursor-not-allowed select-none"
+              >
+                <Stamp size={16} strokeWidth={1.75} />
+                Issue Stamp
+                <Lock size={12} className="ml-auto" />
+              </div>
+            ) : (
+              <NavLink
+                to="/stamp"
+                onClick={() => setMobileOpen(false)}
+                className={({ isActive: active }) =>
+                  `flex items-center gap-2.5 rounded-md px-2.5 py-2 text-[13px] font-semibold transition-colors ${
+                    active
+                      ? 'bg-accent-500 text-white'
+                      : 'bg-accent-400 text-gray-900 hover:bg-accent-500 hover:text-white'
+                  }`
+                }
+              >
+                {({ isActive: active }) => (
+                  <>
+                    <Stamp size={16} strokeWidth={active ? 2 : 1.75} />
+                    Issue Stamp
+                  </>
+                )}
+              </NavLink>
+            )
+          })()}
+
+          <div className="my-3 border-t border-gray-200" />
+
           <ul className="space-y-0.5">
-            {NAV_ITEMS.map((item) => {
+            {NAV_ITEMS.filter((i) => i.to !== '/stamp').map((item) => {
               const lockedBySetup = !setupComplete
               const lockedByApproval = setupComplete && 'requiresApproval' in item && item.requiresApproval && !isActive
               const locked = lockedBySetup || lockedByApproval
               const lockTitle = lockedBySetup
                 ? 'Finish setup to unlock'
                 : 'Available after your account is approved'
-
-              // Issue Stamp is the merchant's whole day — it renders as a
-              // filled gold action, not an ordinary nav row
-              const isStampAction = item.to === '/stamp'
 
               return (
               <li key={item.to}>
@@ -261,17 +296,11 @@ export default function DashboardLayout() {
                     to={item.to}
                     onClick={() => setMobileOpen(false)}
                     className={({ isActive: active }) =>
-                      isStampAction
-                        ? `flex items-center gap-2.5 rounded-md px-2.5 py-[7px] text-[13px] font-semibold transition-colors ${
-                            active
-                              ? 'bg-accent-500 text-white'
-                              : 'bg-accent-400 text-gray-900 hover:bg-accent-500 hover:text-white'
-                          }`
-                        : `flex items-center gap-2.5 rounded-md px-2.5 py-[7px] text-[13px] font-medium transition-colors ${
-                            active
-                              ? 'bg-brand-500 text-white'
-                              : 'text-gray-600 hover:text-gray-900 hover:bg-gray-100'
-                          }`
+                      `flex items-center gap-2.5 rounded-md px-2.5 py-[7px] text-[13px] font-medium transition-colors ${
+                        active
+                          ? 'bg-brand-500 text-white'
+                          : 'text-gray-600 hover:text-gray-900 hover:bg-gray-100'
+                      }`
                     }
                   >
                     {({ isActive: active }) => (
