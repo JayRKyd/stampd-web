@@ -1237,6 +1237,8 @@ export default function Onboarding() {
             <button
               onClick={() => {
                 window.dispatchEvent(new Event('stampd:setup-complete'))
+                // First arrival on the dashboard gets the guided tour
+                localStorage.setItem('stampd_tour_pending', '1')
                 navigate('/dashboard')
               }}
               className="w-full py-3 rounded-xl bg-brand-500 text-white text-[13px] font-bold hover:bg-brand-600 transition-colors focus-ring"

@@ -7,6 +7,7 @@ import {
 import { createClient } from '@/lib/supabase/client'
 import { MerchantStatusProvider } from '@/lib/merchantStatus'
 import { isKioskMode, exitKioskMode, KIOSK_EVENT } from '@/lib/kioskMode'
+import { DashboardTour, shouldStartDashboardTour } from '@/components/DashboardTour'
 
 const NAV_ITEMS = [
   { to: '/dashboard',     icon: LayoutDashboard, label: 'Dashboard' },
@@ -20,6 +21,14 @@ const NAV_ITEMS = [
 
 export default function DashboardLayout() {
   const [mobileOpen, setMobileOpen] = useState(false)
+  const [tourOpen, setTourOpen] = useState(false)
+
+  // Guided tour: fires once, on the first dashboard visit after onboarding
+  useEffect(() => {
+    if (!shouldStartDashboardTour()) return
+    const t = setTimeout(() => setTourOpen(true), 600)
+    return () => clearTimeout(t)
+  }, [])
   const [isActive, setIsActive] = useState(true)
   const [statusLoading, setStatusLoading] = useState(true)
   // Optimistic default so a completed merchant never sees a locked flash;
@@ -250,6 +259,7 @@ export default function DashboardLayout() {
             return locked ? (
               <div
                 title={lockedBySetup ? 'Finish setup to unlock' : 'Available after your account is approved'}
+                data-tour="stamp"
                 className="flex items-center gap-2.5 rounded-md px-2.5 py-2 text-[13px] font-semibold text-gray-300 bg-gray-50 border border-gray-200 cursor-not-allowed select-none"
               >
                 <Stamp size={16} strokeWidth={1.75} />
@@ -259,6 +269,7 @@ export default function DashboardLayout() {
             ) : (
               <NavLink
                 to="/stamp"
+                data-tour="stamp"
                 onClick={() => setMobileOpen(false)}
                 className={({ isActive: active }) =>
                   `flex items-center gap-2.5 rounded-md px-2.5 py-2 text-[13px] font-semibold transition-colors ${
@@ -294,6 +305,7 @@ export default function DashboardLayout() {
                 {!locked ? (
                   <NavLink
                     to={item.to}
+                    data-tour={item.to === '/customers' ? 'customers' : item.to === '/card' ? 'card' : item.to === '/settings' ? 'settings' : undefined}
                     onClick={() => setMobileOpen(false)}
                     className={({ isActive: active }) =>
                       `flex items-center gap-2.5 rounded-md px-2.5 py-[7px] text-[13px] font-medium transition-colors ${
@@ -395,6 +407,8 @@ export default function DashboardLayout() {
           </div>
         </main>
       </div>
+
+      {tourOpen && <DashboardTour onClose={() => setTourOpen(false)} />}
     </div>
   )
 }
