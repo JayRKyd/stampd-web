@@ -22,13 +22,6 @@ const NAV_ITEMS = [
 export default function DashboardLayout() {
   const [mobileOpen, setMobileOpen] = useState(false)
   const [tourOpen, setTourOpen] = useState(false)
-
-  // Guided tour: fires once, on the first dashboard visit after onboarding
-  useEffect(() => {
-    if (!shouldStartDashboardTour()) return
-    const t = setTimeout(() => setTourOpen(true), 600)
-    return () => clearTimeout(t)
-  }, [])
   const [isActive, setIsActive] = useState(true)
   const [statusLoading, setStatusLoading] = useState(true)
   // Optimistic default so a completed merchant never sees a locked flash;
@@ -36,6 +29,18 @@ export default function DashboardLayout() {
   const [setupComplete, setSetupComplete] = useState(true)
   const navigate = useNavigate()
   const location = useLocation()
+
+  // Guided tour: fires once when the merchant lands on the dashboard after
+  // onboarding. Checked on every navigation (not just mount) because the
+  // onboarding screen shares this layout — the layout never remounts when
+  // "Go to Dashboard" is clicked, so a mount-only check would never see the
+  // pending flag that the button just set.
+  useEffect(() => {
+    if (location.pathname !== '/dashboard') return
+    if (!shouldStartDashboardTour()) return
+    const t = setTimeout(() => setTourOpen(true), 600)
+    return () => clearTimeout(t)
+  }, [location.pathname])
 
   // Counter mode: this device is locked to the Stamp page (see lib/kioskMode)
   const [kiosk, setKiosk] = useState(() => isKioskMode())
