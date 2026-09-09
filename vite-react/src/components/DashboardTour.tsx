@@ -44,6 +44,14 @@ export function DashboardTour({ onClose }: { onClose: () => void }) {
   const [step, setStep] = useState(0)
   const [rect, setRect] = useState<DOMRect | null>(null)
 
+  // Strictly once: the moment the tour has shown, it never shows again —
+  // even if the merchant refreshes or leaves mid-tour instead of clicking
+  // Done or Skip.
+  useEffect(() => {
+    localStorage.setItem(DONE_KEY, '1')
+    localStorage.removeItem(PENDING_KEY)
+  }, [])
+
   const finish = useCallback(() => {
     localStorage.setItem(DONE_KEY, '1')
     localStorage.removeItem(PENDING_KEY)
