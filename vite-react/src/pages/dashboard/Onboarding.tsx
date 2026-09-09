@@ -420,6 +420,18 @@ export default function Onboarding() {
     try {
       let cardId = existingCard?.id
       if (!cardId) {
+        // Component state can be stale after back-navigation: a previous
+        // Save may already have created the card. The DB enforces one
+        // active card per merchant, so look before inserting.
+        const { data: already } = await supabase
+          .from('loyalty_cards')
+          .select('id')
+          .eq('merchant_id', merchant!.id)
+          .eq('is_active', true)
+          .maybeSingle()
+        cardId = already?.id
+      }
+      if (!cardId) {
         // Match the onboarding preview; merchants can change it later on /card
         const card_color = merchant!.merchant_type === 'individual' ? '#1e3a5f' : '#00605a'
         const { data, error } = await supabase
@@ -429,6 +441,7 @@ export default function Onboarding() {
           .single()
         if (error) throw error
         cardId = data.id
+        setExistingCard(data)
       } else {
         const { error: cardError } = await supabase
           .from('loyalty_cards')
