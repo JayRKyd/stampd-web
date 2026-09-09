@@ -250,6 +250,10 @@ export default function DashboardLayout() {
                 ? 'Finish setup to unlock'
                 : 'Available after your account is approved'
 
+              // Issue Stamp is the merchant's whole day — it renders as a
+              // filled gold action, not an ordinary nav row
+              const isStampAction = item.to === '/stamp'
+
               return (
               <li key={item.to}>
                 {!locked ? (
@@ -257,11 +261,17 @@ export default function DashboardLayout() {
                     to={item.to}
                     onClick={() => setMobileOpen(false)}
                     className={({ isActive: active }) =>
-                      `flex items-center gap-2.5 rounded-md px-2.5 py-[7px] text-[13px] font-medium transition-colors ${
-                        active
-                          ? 'bg-brand-500 text-white'
-                          : 'text-gray-600 hover:text-gray-900 hover:bg-gray-100'
-                      }`
+                      isStampAction
+                        ? `flex items-center gap-2.5 rounded-md px-2.5 py-[7px] text-[13px] font-semibold transition-colors ${
+                            active
+                              ? 'bg-accent-500 text-white'
+                              : 'bg-accent-400 text-gray-900 hover:bg-accent-500 hover:text-white'
+                          }`
+                        : `flex items-center gap-2.5 rounded-md px-2.5 py-[7px] text-[13px] font-medium transition-colors ${
+                            active
+                              ? 'bg-brand-500 text-white'
+                              : 'text-gray-600 hover:text-gray-900 hover:bg-gray-100'
+                          }`
                     }
                   >
                     {({ isActive: active }) => (
