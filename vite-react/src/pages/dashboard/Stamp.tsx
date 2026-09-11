@@ -817,25 +817,26 @@ export default function Stamp() {
             )}
           </div>
 
-          {/* Quantity — for per-item programs (e.g. two purchases in one visit) */}
-          <div className="flex items-center justify-between mb-5">
-            <span className="text-[13px] text-gray-600">Stamps to add</span>
-            <div className="flex items-center gap-2">
-              <button
-                onClick={() => setQuantity(q => Math.max(1, q - 1))}
-                disabled={quantity <= 1}
-                className="w-11 h-11 rounded-xl border border-gray-200 text-[18px] font-bold text-gray-600 hover:bg-gray-50 disabled:opacity-30 transition-colors"
-              >
-                −
-              </button>
-              <span className="w-10 text-center text-[18px] font-bold text-gray-900">{quantity}</span>
-              <button
-                onClick={() => setQuantity(q => Math.min(5, q + 1))}
-                disabled={quantity >= 5}
-                className="w-11 h-11 rounded-xl border border-gray-200 text-[18px] font-bold text-gray-600 hover:bg-gray-50 disabled:opacity-30 transition-colors"
-              >
-                +
-              </button>
+          {/* Quantity — quick-pick so multi-item purchases are obvious.
+              Defaults to 1, resets to 1 after each stamp (see handleReset),
+              so single-stamp merchants tap straight through. */}
+          <div className="mb-5">
+            <p className="text-[13px] font-semibold text-gray-800">How many stamps?</p>
+            <p className="text-[12px] text-gray-500 mb-2.5">Bought more than one? Pick the number.</p>
+            <div className="flex gap-2">
+              {[1, 2, 3, 4, 5].map(n => (
+                <button
+                  key={n}
+                  onClick={() => setQuantity(n)}
+                  className={`flex-1 h-12 rounded-xl text-[16px] font-bold transition-colors ${
+                    quantity === n
+                      ? 'bg-brand-500 text-white border border-brand-500 shadow-sm'
+                      : 'bg-white text-gray-800 border border-gray-200 hover:border-gray-300'
+                  }`}
+                >
+                  {n}
+                </button>
+              ))}
             </div>
           </div>
 
