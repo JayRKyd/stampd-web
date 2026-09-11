@@ -12,8 +12,10 @@ import {
   ChevronLeft,
   ChevronRight,
   ArrowLeft,
+  Settings2,
 } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
+import { AdminMerchantSetup } from '@/components/AdminMerchantSetup'
 
 const PAGE_SIZE = 25
 
@@ -55,6 +57,7 @@ export default function Admin() {
   const [sortKey, setSortKey] = useState<SortKey>('created_at')
   const [sortDesc, setSortDesc] = useState(true)
   const [page, setPage] = useState(1)
+  const [setupFor, setSetupFor] = useState<{ id: string; name: string } | null>(null)
 
   useEffect(() => {
     async function load() {
@@ -275,7 +278,7 @@ export default function Admin() {
                       <th className="w-[14%] text-left text-[11px] font-semibold text-gray-500 uppercase tracking-wider px-4 py-2.5 hidden lg:table-cell sticky top-0 bg-gray-50">
                         Category
                       </th>
-                      <th className="w-[22%] text-left text-[11px] font-semibold text-gray-500 uppercase tracking-wider px-4 py-2.5 hidden sm:table-cell sticky top-0 bg-gray-50">
+                      <th className="w-[18%] text-left text-[11px] font-semibold text-gray-500 uppercase tracking-wider px-4 py-2.5 hidden sm:table-cell sticky top-0 bg-gray-50">
                         Email
                       </th>
                       <th
@@ -287,8 +290,8 @@ export default function Admin() {
                       <th className="w-[8%] text-left text-[11px] font-semibold text-gray-500 uppercase tracking-wider px-4 py-2.5 sticky top-0 bg-gray-50">
                         Status
                       </th>
-                      <th className="w-[8%] text-right text-[11px] font-semibold text-gray-500 uppercase tracking-wider px-4 py-2.5 sticky top-0 bg-gray-50">
-                        Action
+                      <th className="w-[12%] text-right text-[11px] font-semibold text-gray-500 uppercase tracking-wider px-4 py-2.5 sticky top-0 bg-gray-50">
+                        Actions
                       </th>
                     </tr>
                   </thead>
@@ -343,26 +346,36 @@ export default function Admin() {
                             </span>
                           )}
                         </td>
-                        <td className="px-4 py-3 text-right">
-                          {merchant.is_active ? (
+                        <td className="px-4 py-3">
+                          <div className="flex items-center justify-end gap-1.5">
                             <button
-                              onClick={() => setActive(merchant.id, false)}
-                              disabled={acting === merchant.id}
-                              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-gray-200 text-gray-600 text-[12px] font-semibold hover:bg-gray-50 disabled:opacity-60 transition-colors"
+                              onClick={() => setSetupFor({ id: merchant.id, name: merchant.business_name })}
+                              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-gray-200 text-gray-600 text-[12px] font-semibold hover:bg-gray-50 transition-colors"
+                              title="Set up this merchant's card and images"
                             >
-                              <XCircle size={14} />
-                              {acting === merchant.id ? 'Updating…' : 'Deactivate'}
+                              <Settings2 size={14} />
+                              <span className="hidden lg:inline">Set up</span>
                             </button>
-                          ) : (
-                            <button
-                              onClick={() => setActive(merchant.id, true)}
-                              disabled={acting === merchant.id}
-                              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-brand-500 text-white text-[12px] font-semibold hover:bg-brand-600 disabled:opacity-60 transition-colors"
-                            >
-                              <CheckCircle2 size={14} />
-                              {acting === merchant.id ? 'Approving…' : 'Approve'}
-                            </button>
-                          )}
+                            {merchant.is_active ? (
+                              <button
+                                onClick={() => setActive(merchant.id, false)}
+                                disabled={acting === merchant.id}
+                                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-gray-200 text-gray-600 text-[12px] font-semibold hover:bg-gray-50 disabled:opacity-60 transition-colors"
+                              >
+                                <XCircle size={14} />
+                                <span className="hidden lg:inline">{acting === merchant.id ? 'Updating…' : 'Deactivate'}</span>
+                              </button>
+                            ) : (
+                              <button
+                                onClick={() => setActive(merchant.id, true)}
+                                disabled={acting === merchant.id}
+                                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-brand-500 text-white text-[12px] font-semibold hover:bg-brand-600 disabled:opacity-60 transition-colors"
+                              >
+                                <CheckCircle2 size={14} />
+                                {acting === merchant.id ? 'Approving…' : 'Approve'}
+                              </button>
+                            )}
+                          </div>
                         </td>
                       </tr>
                     ))}
@@ -402,6 +415,16 @@ export default function Admin() {
           )}
         </div>
       </main>
+
+      {setupFor && (
+        <AdminMerchantSetup
+          merchantId={setupFor.id}
+          merchantName={setupFor.name}
+          onClose={() => setSetupFor(null)}
+          onSaved={() => setMerchants(prev => prev.map(m =>
+            m.id === setupFor.id ? { ...m, has_active_card: true } : m))}
+        />
+      )}
     </div>
   )
 }
