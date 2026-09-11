@@ -29,6 +29,10 @@ export default function Customers() {
   const [merchantId, setMerchantId] = useState('')
   const [stampGoal, setStampGoal] = useState(10)
   const [search, setSearch] = useState('')
+  // PIN search: a query of only digits is looked up server-side (PINs are
+  // never shipped to the browser). null = searched, no member with that PIN.
+  const [pinUserId, setPinUserId] = useState<string | null | undefined>(undefined)
+  const [pinLoading, setPinLoading] = useState(false)
   const [segment, setSegment] = useState<SegmentId>(
     ['all', 'new', 'reward_ready', 'slipping', 'vip'].includes(initialSegment) ? initialSegment : 'all'
   )
@@ -74,10 +78,33 @@ export default function Customers() {
     slipping: customers.filter(isSlipping).length,
   }), [customers, stampGoal])
 
+  const q = search.trim()
+  const isPinQuery = /^\d+$/.test(q)
+  const fullPin = isPinQuery && q.length === 6
+
+  // Look up a full 6-digit PIN server-side (debounced), scoped to this
+  // merchant's own members.
+  useEffect(() => {
+    if (!fullPin) { setPinUserId(undefined); setPinLoading(false); return }
+    setPinLoading(true)
+    const t = setTimeout(async () => {
+      const supabase = createClient()
+      const { data } = await supabase.rpc('find_my_customer_by_pin', { p_pin: q })
+      setPinUserId((data as string | null) ?? null)
+      setPinLoading(false)
+    }, 250)
+    return () => clearTimeout(t)
+  }, [fullPin, q])
+
   const visible = useMemo(() => {
-    const q = search.toLowerCase()
+    // PIN mode: ignore segment, match the one customer by resolved user_id
+    if (isPinQuery) {
+      if (!fullPin || pinLoading) return []
+      return customers.filter(c => c.user_id === pinUserId)
+    }
+    const ql = q.toLowerCase()
     const filtered = customers.filter(c =>
-      inSegment(c, segment, stampGoal) && displayName(c).toLowerCase().includes(q)
+      inSegment(c, segment, stampGoal) && displayName(c).toLowerCase().includes(ql)
     )
     const dir = sortDesc ? -1 : 1
     return [...filtered].sort((a, b) => {
@@ -87,7 +114,7 @@ export default function Customers() {
       const bt = b.last_stamp_at ? new Date(b.last_stamp_at).getTime() : 0
       return (at - bt) * dir
     })
-  }, [customers, segment, search, sortKey, sortDesc, stampGoal])
+  }, [customers, segment, q, isPinQuery, fullPin, pinLoading, pinUserId, sortKey, sortDesc, stampGoal])
 
   function toggleSort(key: SortKey) {
     if (sortKey === key) setSortDesc(d => !d)
@@ -165,7 +192,8 @@ export default function Customers() {
           <Search size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
           <input
             type="text"
-            placeholder="Search customers..."
+            inputMode="text"
+            placeholder="Search by name or 6-digit PIN…"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             className="w-full pl-9 pr-4 py-2 rounded-lg border border-gray-200 bg-white text-[13px] focus:outline-none focus:border-brand-500 focus:ring-1 focus:ring-brand-500/20 transition-all placeholder:text-gray-400"
@@ -176,14 +204,31 @@ export default function Customers() {
       {visible.length === 0 ? (
         <div className="border border-gray-200 rounded-xl p-12 text-center">
           <Users size={32} className="text-gray-200 mx-auto mb-3" />
-          <p className="text-[13px] font-medium text-gray-500">
-            {customers.length === 0 ? 'No customers yet' : 'No customers match'}
-          </p>
-          <p className="text-[12px] text-gray-400 mt-1">
-            {customers.length === 0
-              ? 'Customers appear here after you stamp them for the first time.'
-              : 'Try a different segment or search term.'}
-          </p>
+          {isPinQuery ? (
+            <>
+              <p className="text-[13px] font-medium text-gray-500">
+                {pinLoading ? 'Looking up PIN…'
+                  : !fullPin ? 'Enter the full 6-digit PIN'
+                  : 'No customer with that PIN'}
+              </p>
+              <p className="text-[12px] text-gray-400 mt-1">
+                {!fullPin
+                  ? 'Type all six digits to find one customer exactly.'
+                  : 'That PIN isn’t a member of your program yet — stamp them once to add them.'}
+              </p>
+            </>
+          ) : (
+            <>
+              <p className="text-[13px] font-medium text-gray-500">
+                {customers.length === 0 ? 'No customers yet' : 'No customers match'}
+              </p>
+              <p className="text-[12px] text-gray-400 mt-1">
+                {customers.length === 0
+                  ? 'Customers appear here after you stamp them for the first time.'
+                  : 'Try a different segment or search term.'}
+              </p>
+            </>
+          )}
         </div>
       ) : (
         <div className="border border-gray-200 rounded-xl overflow-hidden">
