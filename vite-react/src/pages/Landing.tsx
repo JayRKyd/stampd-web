@@ -3,6 +3,7 @@ import { Apple, Play, ArrowRight } from 'lucide-react'
 import {
   MarketingNav, MarketingFooter, MiniStampCard,
   MiniPinCard, MiniTicket, MiniNotification, MiniPinCells,
+  MerchantDirectory,
 } from '@/components/marketing'
 import { WaitlistForm } from '@/components/WaitlistForm'
 import { APP_STORE_URL, PLAY_STORE_URL } from '@/lib/support'
@@ -166,6 +167,9 @@ export default function Landing() {
           </div>
         </div>
       </section>
+
+      {/* ── Now on Stampd (live merchant directory) ── */}
+      <MerchantDirectory />
 
       {/* ── Pros ── */}
       <section className="w-[80%] max-w-[1600px] mx-auto py-20 lg:py-24">

@@ -1,8 +1,10 @@
+import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
-import { Gift, Check, ChevronRight, Fingerprint } from 'lucide-react'
+import { Gift, Check, ChevronRight, Fingerprint, Plus, ArrowRight } from 'lucide-react'
 import { getStampIcon } from '@/lib/stampIcons'
 import { shade, isLightColor } from '@/lib/cardPreview'
 import { whatsappHref, contactHref } from '@/lib/support'
+import { supabase } from '@/lib/supabase/client'
 
 // Shared pieces for the public marketing pages (Landing, Merchants).
 // Palette mirrors the mobile app: cream #F7F2E8, teal #00605A, gold accents.
@@ -315,5 +317,145 @@ export function MiniDashboard({ className = '' }: { className?: string }) {
         <span className="text-[10.5px] text-[#74807E] shrink-0">2m ago</span>
       </div>
     </div>
+  )
+}
+
+// ── "Now on Stampd" public directory ──
+// Real, live merchants pulled from get_public_directory() (active shops only,
+// display-safe columns). Logos sit on the cream well with mix-blend-multiply,
+// so white-background uploads read as transparent without touching the file —
+// the brand color lives in each shop's own stamp strip, not a decorative rail.
+
+type DirEntry = {
+  business_name: string
+  category: string | null
+  description: string | null
+  logo_url: string | null
+  card_color: string | null
+  stamp_icon: string | null
+  stamp_count_required: number | null
+  reward_title: string | null
+}
+
+function DirectoryTile({ m }: { m: DirEntry }) {
+  const color = m.card_color || '#00605A'
+  const total = Math.min(Math.max(m.stamp_count_required ?? 10, 3), 12)
+  const initials = m.business_name
+    .split(/[\s/]+/).filter(Boolean).slice(0, 2)
+    .map(w => w[0]?.toUpperCase() ?? '').join('')
+
+  return (
+    <div className="group bg-white border border-black/5 rounded-[20px] overflow-hidden transition-all hover:-translate-y-1 hover:shadow-[0_22px_40px_-22px_rgba(26,43,42,0.35)]">
+      <div className="h-[104px] flex items-center justify-center px-6 bg-[#FBF8F1] border-b border-black/5">
+        {m.logo_url ? (
+          <img
+            src={m.logo_url}
+            alt={m.business_name}
+            loading="lazy"
+            className="max-h-[62px] max-w-full object-contain mix-blend-multiply"
+          />
+        ) : (
+          <div
+            className="w-14 h-14 rounded-2xl flex items-center justify-center text-[18px] font-extrabold text-white"
+            style={{ backgroundColor: color }}
+          >
+            {initials}
+          </div>
+        )}
+      </div>
+
+      <div className="p-[18px]">
+        <p className="text-[17px] font-extrabold tracking-[-0.02em] leading-tight">{m.business_name}</p>
+        {m.category && (
+          <p className="mt-1.5 text-[10.5px] font-extrabold tracking-[0.13em] uppercase text-[#74807E]">{m.category}</p>
+        )}
+        {m.description && (
+          <p
+            className="mt-2 text-[12.5px] text-[#556570] leading-snug overflow-hidden"
+            style={{ display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', minHeight: '2.6em' }}
+          >
+            {m.description}
+          </p>
+        )}
+
+        <div className="mt-4 pt-4 border-t border-black/5">
+          <div className="flex flex-wrap items-center gap-1.5">
+            {Array.from({ length: total - 1 }).map((_, i) => (
+              <span
+                key={i}
+                className="w-[14px] h-[14px] rounded-full border-[1.6px]"
+                style={{ borderColor: color, opacity: 0.4 }}
+              />
+            ))}
+            <span
+              className="w-[19px] h-[19px] rounded-full flex items-center justify-center ml-px"
+              style={{ backgroundColor: color }}
+            >
+              <Gift size={10} className="text-white" />
+            </span>
+          </div>
+          {m.reward_title && (
+            <p className="mt-3 text-[12.5px] font-extrabold tracking-[-0.01em] text-[#1A2B2A]">
+              <span className="font-semibold text-[#74807E]">Full card →</span> {m.reward_title}
+            </p>
+          )}
+        </div>
+      </div>
+    </div>
+  )
+}
+
+export function MerchantDirectory() {
+  const [rows, setRows] = useState<DirEntry[] | null>(null)
+
+  useEffect(() => {
+    let alive = true
+    supabase
+      .rpc('get_public_directory')
+      .then(({ data }) => { if (alive) setRows((data as DirEntry[] | null) ?? []) })
+    return () => { alive = false }
+  }, [])
+
+  // Nothing to show (still loading, or no live merchants) → render nothing,
+  // so the page never shows an empty band.
+  if (!rows || rows.length === 0) return null
+
+  const shown = rows.slice(0, 7) // homepage keeps it tight; a /directory page can show all later
+
+  return (
+    <section className="bg-[#F7F2E8] border-t border-black/5">
+      <div className="w-[80%] max-w-[1600px] mx-auto py-20 lg:py-24">
+        <p className="text-[13px] md:text-[14px] font-extrabold tracking-[0.2em] text-[#00605A] mb-4">NOW ON STAMPD</p>
+        <h2 className="text-[30px] md:text-[38px] lg:text-[44px] xl:text-[48px] font-extrabold tracking-[-0.03em] leading-tight max-w-[16ch]">
+          Your PIN already <span className="text-[#c99a2e]">works here.</span>
+        </h2>
+        <p className="mt-5 text-[15.5px] lg:text-[18px] text-[#556570] leading-relaxed max-w-lg">
+          These Grand Bahama spots are live on Stampd today. Walk in, say your six
+          digits, and your card starts filling on the first visit.
+        </p>
+        <span className="mt-4 inline-flex items-center gap-2 text-[12.5px] font-bold text-[#00605A] bg-[#00605A]/[0.08] px-3 py-1.5 rounded-full">
+          <span className="w-[7px] h-[7px] rounded-full bg-[#00605A]" />
+          {rows.length} {rows.length === 1 ? 'spot' : 'spots'} live · more joining every week
+        </span>
+
+        <div className="mt-9 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-[18px]">
+          {shown.map((m, i) => <DirectoryTile key={i} m={m} />)}
+
+          <Link
+            to="/merchants"
+            className="rounded-[20px] border-[1.6px] border-dashed border-[#00605A]/40 bg-[#00605A]/[0.03] flex flex-col items-center justify-center text-center p-7 min-h-[220px] transition-colors hover:bg-[#00605A]/[0.06]"
+          >
+            <span className="w-11 h-11 rounded-full bg-[#00605A]/10 flex items-center justify-center mb-3.5">
+              <Plus size={20} className="text-[#00605A]" />
+            </span>
+            <span className="text-[15px] font-extrabold tracking-[-0.01em] text-[#1A2B2A]">Your spot here</span>
+            <span className="mt-1.5 text-[12.5px] text-[#556570]">Get set up free, live in a day.</span>
+            <span className="mt-3 inline-flex items-center gap-1 text-[12.5px] font-extrabold text-[#00605A]">
+              List your business <ArrowRight size={13} />
+            </span>
+          </Link>
+        </div>
+      </div>
+    </section>
   )
 }
