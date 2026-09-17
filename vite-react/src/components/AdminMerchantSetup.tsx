@@ -32,6 +32,10 @@ export function AdminMerchantSetup({ merchantId, merchantName, onClose, onSaved 
   const [saving, setSaving] = useState(false)
   const [savedOk, setSavedOk] = useState(false)
   const [error, setError] = useState('')
+  const [lat, setLat] = useState('')
+  const [lng, setLng] = useState('')
+  const [savingLoc, setSavingLoc] = useState(false)
+  const [savedLoc, setSavedLoc] = useState(false)
 
   const logoInput = useRef<HTMLInputElement>(null)
   const coverInput = useRef<HTMLInputElement>(null)
@@ -43,6 +47,8 @@ export function AdminMerchantSetup({ merchantId, merchantName, onClose, onSaved 
       if (data?.ok) {
         setLogoUrl(data.merchant?.logo_url ?? null)
         setCoverUrl(data.merchant?.cover_image_url ?? null)
+        setLat(data.merchant?.latitude != null ? String(data.merchant.latitude) : '')
+        setLng(data.merchant?.longitude != null ? String(data.merchant.longitude) : '')
         setVisitLabel(data.merchant?.merchant_type === 'individual' ? '' : '')
         if (data.card) {
           setVisitLabel(data.card.visit_label ?? '')
@@ -98,6 +104,27 @@ export function AdminMerchantSetup({ merchantId, merchantName, onClose, onSaved 
     setSavedOk(true)
     onSaved()
     setTimeout(() => setSavedOk(false), 2500)
+  }
+
+  const saveLocation = async () => {
+    const latN = lat.trim() === '' ? null : Number(lat)
+    const lngN = lng.trim() === '' ? null : Number(lng)
+    if ((latN !== null && Number.isNaN(latN)) || (lngN !== null && Number.isNaN(lngN))) {
+      setError('Latitude and longitude must be numbers (or both blank).'); return
+    }
+    if ((latN === null) !== (lngN === null)) {
+      setError('Set both latitude and longitude, or clear both.'); return
+    }
+    setSavingLoc(true)
+    setError('')
+    const supabase = createClient()
+    const { data, error: rpcErr } = await supabase.rpc('admin_set_merchant_location', {
+      p_merchant_id: merchantId, p_lat: latN, p_lng: lngN,
+    })
+    setSavingLoc(false)
+    if (rpcErr || !data?.ok) { setError('Could not save the location.'); return }
+    setSavedLoc(true)
+    setTimeout(() => setSavedLoc(false), 2500)
   }
 
   return (
@@ -221,6 +248,43 @@ export function AdminMerchantSetup({ merchantId, merchantName, onClose, onSaved 
                   className="w-full px-3 py-2 rounded-lg border border-gray-200 text-[13px] focus:outline-none focus:border-brand-500"
                 />
               </div>
+            </div>
+
+            {/* Map location (admin) — precise pin for the app's Directions button */}
+            <div className="pt-2 border-t border-gray-100">
+              <p className="text-[13px] font-semibold text-gray-800 mb-1">Map location</p>
+              <p className="text-[12px] text-gray-500 mb-3">
+                Precise pin for Directions. In Google Maps, right-click the exact spot →
+                click the coordinates to copy → paste into Latitude. Leave blank to use their typed address.
+              </p>
+              <div className="flex items-center gap-2">
+                <input
+                  type="text" inputMode="decimal" value={lat} placeholder="Latitude"
+                  onChange={e => {
+                    const v = e.target.value
+                    // Google Maps copies "26.5412, -78.6957" — split it across both fields
+                    if (v.includes(',')) {
+                      const [a, b] = v.split(',')
+                      setLat(a.trim()); setLng((b ?? '').trim())
+                    } else setLat(v)
+                  }}
+                  className="flex-1 min-w-0 px-3 py-2 rounded-lg border border-gray-200 text-[13px] focus:outline-none focus:border-brand-500"
+                />
+                <input
+                  type="text" inputMode="decimal" value={lng} placeholder="Longitude"
+                  onChange={e => setLng(e.target.value)}
+                  className="flex-1 min-w-0 px-3 py-2 rounded-lg border border-gray-200 text-[13px] focus:outline-none focus:border-brand-500"
+                />
+              </div>
+              <button
+                onClick={saveLocation}
+                disabled={savingLoc}
+                className={`mt-2.5 w-full py-2 rounded-lg text-[13px] font-semibold transition-colors disabled:opacity-60 ${
+                  savedLoc ? 'bg-green-600 text-white' : 'border border-gray-200 text-gray-700 hover:bg-gray-50'
+                }`}
+              >
+                {savingLoc ? 'Saving…' : savedLoc ? <span className="inline-flex items-center gap-1.5"><Check size={14} /> Location saved</span> : 'Save location'}
+              </button>
             </div>
 
             {error && <p className="text-[12px] text-red-600 bg-red-50 rounded-lg px-3 py-2.5">{error}</p>}
