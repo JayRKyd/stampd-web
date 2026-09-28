@@ -14,6 +14,11 @@ interface QueuedStamp {
   quantity: number
   staffId: string | null
   queuedAt: string
+  // When the staff-PIN gate was passed offline, the entered PIN rides along
+  // and is verified server-side at delivery — offline can't check it, and
+  // blocking the counter until wifi returns isn't an option. It lives in
+  // localStorage only until the queue flushes, on the merchant's own device.
+  staffPin?: string
 }
 
 const QUEUE_KEY = 'stampd_offline_queue'
@@ -166,11 +171,30 @@ export default function Stamp() {
     const keep: QueuedStamp[] = [] // transient failures — retry on next flush
     let delivered = 0
     let rejected = 0
+    let rejectedStaff = 0
 
     try {
       for (let i = 0; i < queue.length; i++) {
         const item = queue[i]
         try {
+          // Staff gate passed offline: the deferred PIN check happens here,
+          // before the stamp is issued. Wrong PIN = the stamp never lands.
+          if (item.staffPin && item.staffId) {
+            const { data: pinOk, error: pinErr } = await supabase.rpc('verify_staff_pin', {
+              p_staff_id: item.staffId,
+              p_pin: item.staffPin,
+            })
+            if (pinErr) { // network/transient — retry later
+              keep.push(item)
+              writeQueue([...keep, ...queue.slice(i + 1)])
+              continue
+            }
+            if (pinOk !== true) { // wrong staff PIN — dropping, retrying won't help
+              rejectedStaff++
+              writeQueue([...keep, ...queue.slice(i + 1)])
+              continue
+            }
+          }
           const { data, error } = await supabase.rpc('issue_stamp_by_personal_pin', {
             p_pin: item.pin,
             p_merchant_id: merchantId,
@@ -195,10 +219,11 @@ export default function Stamp() {
     }
 
     if (delivered > 0) setTodayCount(prev => prev + delivered)
-    if (delivered > 0 || rejected > 0) {
+    if (delivered > 0 || rejected > 0 || rejectedStaff > 0) {
       setFlushMsg(
         `${delivered} queued stamp${delivered === 1 ? '' : 's'} delivered` +
-        (rejected > 0 ? ` · ${rejected} rejected (invalid PIN)` : '')
+        (rejected > 0 ? ` · ${rejected} rejected (invalid customer PIN)` : '') +
+        (rejectedStaff > 0 ? ` · ${rejectedStaff} rejected (staff PIN check failed)` : '')
       )
       setTimeout(() => setFlushMsg(''), 6000)
     }
@@ -224,14 +249,21 @@ export default function Stamp() {
   }, [merchantId])
 
   // The actual enqueue — call only after the staff gate has been satisfied
-  const pushToQueue = () => {
+  // (or, offline, with the entered staff PIN riding along for deferred check)
+  const pushToQueue = (staffPin?: string) => {
     const queue = readQueue()
-    queue.push({ pin, quantity, staffId: selectedStaffId, queuedAt: new Date().toISOString() })
+    queue.push({
+      pin, quantity, staffId: selectedStaffId, queuedAt: new Date().toISOString(),
+      ...(staffPin ? { staffPin } : {}),
+    })
     writeQueue(queue)
     setPin('')
     setQuantity(1)
+    setStaffPinInput('')
     setState('idle')
-    setFlushMsg('Stamp queued — it will send automatically when you reconnect')
+    setFlushMsg(staffPin
+      ? 'Stamp queued — it will send when you reconnect, after the staff PIN is verified'
+      : 'Stamp queued — it will send automatically when you reconnect')
     setTimeout(() => setFlushMsg(''), 5000)
   }
 
@@ -380,6 +412,19 @@ export default function Stamp() {
 
   const verifyStaffPin = async () => {
     if (!selectedStaff || verifyingPin) return
+
+    // Offline the verify RPC can't run. Redeeming truly needs the server, but
+    // a stamp can queue with the PIN attached — it gets checked at delivery,
+    // so losing wifi neither blocks the counter nor opens the gate.
+    if (!navigator.onLine) {
+      if (redeemIntentRef.current) {
+        setStaffPinError("Redeeming needs a connection — try again when you're back online.")
+        return
+      }
+      pushToQueue(staffPinInput)
+      return
+    }
+
     setVerifyingPin(true)
     const { data: pinOk, error: pinErr } = await createClient().rpc('verify_staff_pin', {
       p_staff_id: selectedStaff.id,
@@ -911,6 +956,13 @@ export default function Stamp() {
             autoFocus
           />
 
+          {!online && !redeemIntentRef.current && (
+            <div className="flex items-center gap-2 mb-3 text-amber-700 bg-amber-50 rounded-lg px-3 py-2.5">
+              <WifiOff size={14} className="shrink-0" />
+              <p className="text-[12px]">You're offline — the PIN will be verified when the connection returns, before the stamp is delivered.</p>
+            </div>
+          )}
+
           {staffPinError && (
             <div className="flex items-center gap-2 mb-3 text-red-600 bg-red-50 rounded-lg px-3 py-2.5">
               <AlertCircle size={14} className="shrink-0" />
@@ -920,7 +972,7 @@ export default function Stamp() {
 
           <div className="flex gap-2">
             <button
-              onClick={() => setState('found')}
+              onClick={() => setState(customer ? 'found' : pin.length === 6 && !online ? 'offline_ready' : 'idle')}
               className="flex-1 py-3 rounded-xl border border-gray-200 text-[14px] font-medium text-gray-600 hover:bg-gray-50 transition-colors"
             >
               Back
@@ -930,7 +982,10 @@ export default function Stamp() {
               disabled={staffPinInput.length < 4 || verifyingPin}
               className="flex-[2] py-3 rounded-xl bg-brand-500 text-[14px] font-semibold text-white hover:bg-brand-600 transition-colors disabled:opacity-50"
             >
-              {verifyingPin ? 'Checking…' : redeemIntentRef.current ? 'Confirm & Redeem' : 'Confirm & Stamp'}
+              {verifyingPin ? 'Checking…'
+                : redeemIntentRef.current ? 'Confirm & Redeem'
+                : !online ? 'Queue Stamp'
+                : 'Confirm & Stamp'}
             </button>
           </div>
         </div>
