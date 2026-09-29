@@ -36,9 +36,12 @@ export function AdminMerchantSetup({ merchantId, merchantName, onClose, onSaved 
   const [lng, setLng] = useState('')
   const [savingLoc, setSavingLoc] = useState(false)
   const [savedLoc, setSavedLoc] = useState(false)
+  const [photos, setPhotos] = useState<{ id: string; url: string }[]>([])
+  const [uploadingPhoto, setUploadingPhoto] = useState(false)
 
   const logoInput = useRef<HTMLInputElement>(null)
   const coverInput = useRef<HTMLInputElement>(null)
+  const photoInput = useRef<HTMLInputElement>(null)
 
   useEffect(() => {
     async function load() {
@@ -58,6 +61,12 @@ export function AdminMerchantSetup({ merchantId, merchantName, onClose, onSaved 
       } else {
         setError('Could not load this merchant.')
       }
+      const { data: photoRows } = await supabase
+        .from('merchant_photos')
+        .select('id, url')
+        .eq('merchant_id', merchantId)
+        .order('sort_order')
+      setPhotos(photoRows ?? [])
       setLoading(false)
     }
     load()
@@ -83,6 +92,36 @@ export function AdminMerchantSetup({ merchantId, merchantName, onClose, onSaved 
     }
   }, [merchantId])
 
+  const uploadPhoto = useCallback(async (file: File) => {
+    setUploadingPhoto(true)
+    setError('')
+    try {
+      const resized = await resizeImage(file, 1600)
+      const b64 = await fileToB64(resized)
+      const supabase = createClient()
+      const { data, error: fnErr } = await supabase.functions.invoke('admin-upload-merchant-asset', {
+        body: { merchant_id: merchantId, kind: 'photo', contentType: resized.type, b64 },
+      })
+      if (fnErr || !data?.ok) {
+        setError(data?.error === 'photo_limit' ? 'This merchant already has 3 photos.' : 'Could not upload the photo.')
+        return
+      }
+      setPhotos(prev => [...prev, { id: data.photo.id, url: data.photo.url }])
+    } catch {
+      setError('Could not process the photo.')
+    } finally {
+      setUploadingPhoto(false)
+    }
+  }, [merchantId])
+
+  const removePhoto = async (photoId: string) => {
+    setError('')
+    const supabase = createClient()
+    const { data, error: rpcErr } = await supabase.rpc('admin_remove_merchant_photo', { p_photo_id: photoId })
+    if (rpcErr || !data?.ok) { setError('Could not remove the photo.'); return }
+    setPhotos(prev => prev.filter(p => p.id !== photoId))
+  }
+
   const saveCard = async () => {
     const clean = tiers
       .map(t => ({ stamps: parseInt(t.stamps), reward: t.reward.trim() }))
@@ -96,7 +135,9 @@ export function AdminMerchantSetup({ merchantId, merchantName, onClose, onSaved 
       p_merchant_id: merchantId,
       p_stamp_count: top.stamps,
       p_visit_label: visitLabel.trim() || null,
-      p_card_color: '#00605a',
+      // null = keep the merchant's current color; a hardcoded teal here once
+      // silently reset a custom purple card on every save
+      p_card_color: null,
       p_tiers: clean,
     })
     setSaving(false)
@@ -204,6 +245,43 @@ export function AdminMerchantSetup({ merchantId, merchantName, onClose, onSaved 
               <p className="text-[11px] text-gray-400 mt-1.5">Whitespace is trimmed automatically so it fills the tile.</p>
               <input ref={logoInput} type="file" accept="image/*" className="hidden"
                 onChange={e => { const f = e.target.files?.[0]; if (f) upload('logo', f); e.target.value = '' }} />
+            </div>
+
+            {/* Gallery photos — the app shows these as a swipeable hero */}
+            <div>
+              <p className="text-[13px] font-semibold text-gray-800 mb-1.5">Photos <span className="font-normal text-gray-400">(up to 3)</span></p>
+              <div className="grid grid-cols-3 gap-2">
+                {photos.map(p => (
+                  <div key={p.id} className="relative h-20 rounded-xl border border-gray-200 overflow-hidden group">
+                    <img src={p.url} alt="merchant photo" className="w-full h-full object-cover" />
+                    <button
+                      onClick={() => removePhoto(p.id)}
+                      className="absolute top-1 right-1 p-1 rounded-md bg-white/90 text-gray-500 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-opacity"
+                      aria-label="Remove photo"
+                    >
+                      <Trash2 size={13} />
+                    </button>
+                  </div>
+                ))}
+                {photos.length < 3 && (
+                  <div
+                    onClick={() => !uploadingPhoto && photoInput.current?.click()}
+                    className="relative h-20 rounded-xl border border-dashed border-gray-300 bg-gray-50 cursor-pointer hover:border-brand-400 transition-colors flex items-center justify-center"
+                  >
+                    {uploadingPhoto ? (
+                      <div className="w-5 h-5 border-2 border-brand-500 border-t-transparent rounded-full animate-spin" />
+                    ) : (
+                      <div className="text-center text-gray-400">
+                        <Plus size={16} className="mx-auto" />
+                        <span className="text-[11px]">Add photo</span>
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
+              <p className="text-[11px] text-gray-400 mt-1.5">One photo shows as a still; two or three become a swipeable gallery in the app.</p>
+              <input ref={photoInput} type="file" accept="image/*" className="hidden"
+                onChange={e => { const f = e.target.files?.[0]; if (f) uploadPhoto(f); e.target.value = '' }} />
             </div>
 
             {/* Card */}
