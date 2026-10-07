@@ -57,7 +57,7 @@ export function WaitlistForm({
           <p className="text-[15px] font-bold">{audience === 'merchant' ? 'Got it.' : "You're on the list."}</p>
           <p className={`text-[13px] ${dark ? 'text-white/70' : 'text-[#556570]'}`}>
             {audience === 'merchant'
-              ? 'Jordy will reach out within a day to set up your card.'
+              ? 'Someone from Stampd will reach out within a day to set up your card.'
               : "We'll email you when Stampd reaches your island."}
           </p>
         </div>

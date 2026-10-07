@@ -304,7 +304,7 @@ export default function Merchants() {
           </h2>
           <p className="text-[15px] lg:text-[17px] text-white/75 max-w-lg mx-auto mb-8">
             Call or message and we'll set up your card together. Or leave your
-            details and Jordy will reach out within a day.
+            details and someone from Stampd will reach out within a day.
           </p>
           <div className="flex flex-wrap justify-center items-center gap-3 mb-8">
             {whatsappHref ? (
