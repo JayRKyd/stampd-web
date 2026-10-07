@@ -34,7 +34,7 @@ export function MarketingNav({ active }: { active?: 'home' | 'merchants' }) {
           For merchants
         </Link>
         <a
-          href={active === 'merchants' ? '#founding' : '#download'}
+          href={active === 'merchants' ? '#founding' : '/get'}
           className="text-[13px] font-bold text-white bg-[#00605A] hover:bg-[#024D48] px-4 py-2 rounded-full transition-colors whitespace-nowrap shrink-0"
         >
           {active === 'merchants' ? 'Become a founding shop' : 'Get the app'}

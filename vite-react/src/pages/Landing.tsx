@@ -225,7 +225,13 @@ export default function Landing() {
             Download Stampd, get your PIN, and start collecting on your next visit.
             Live in Grand Bahama now. Nassau this November.
           </p>
-          <div className="mt-8 flex flex-wrap justify-center gap-3">
+          <a
+            href="/get"
+            className="mt-8 inline-flex items-center gap-2 px-7 py-3.5 rounded-full bg-[#00605A] text-white text-[15px] font-bold hover:bg-[#024D48] transition-colors"
+          >
+            Get the app <ArrowRight size={16} />
+          </a>
+          <div className="mt-5 flex flex-wrap justify-center gap-3 opacity-80">
             <StoreBadge icon={Apple} store="App Store" sub="Download on the" href={APP_STORE_URL} />
             <StoreBadge icon={Play} store="Google Play" sub="Get it on" href={PLAY_STORE_URL} />
           </div>
