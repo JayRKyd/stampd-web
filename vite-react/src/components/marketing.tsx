@@ -34,10 +34,10 @@ export function MarketingNav({ active }: { active?: 'home' | 'merchants' }) {
           For merchants
         </Link>
         <a
-          href="#waitlist"
+          href={active === 'merchants' ? '#founding' : '#download'}
           className="text-[13px] font-bold text-white bg-[#00605A] hover:bg-[#024D48] px-4 py-2 rounded-full transition-colors whitespace-nowrap shrink-0"
         >
-          Join waitlist
+          {active === 'merchants' ? 'Become a founding shop' : 'Get the app'}
         </a>
       </div>
     </nav>
@@ -430,8 +430,9 @@ export function MerchantDirectory() {
           Your PIN already <span className="text-[#c99a2e]">works here.</span>
         </h2>
         <p className="mt-5 text-[15.5px] lg:text-[18px] text-[#556570] leading-relaxed max-w-lg">
-          These Grand Bahama spots are live on Stampd today. Walk in, say your six
-          digits, and your card starts filling on the first visit.
+          These spots are live on Stampd today in Grand Bahama, with Nassau joining
+          in November. Walk in, say your six digits, and your card starts filling
+          on the first visit.
         </p>
         <span className="mt-4 inline-flex items-center gap-2 text-[12.5px] font-bold text-[#00605A] bg-[#00605A]/[0.08] px-3 py-1.5 rounded-full">
           <span className="w-[7px] h-[7px] rounded-full bg-[#00605A]" />
@@ -449,7 +450,7 @@ export function MerchantDirectory() {
               <Plus size={20} className="text-[#00605A]" />
             </span>
             <span className="text-[15px] font-extrabold tracking-[-0.01em] text-[#1A2B2A]">Your spot here</span>
-            <span className="mt-1.5 text-[12.5px] text-[#556570]">Get set up free, live in a day.</span>
+            <span className="mt-1.5 text-[12.5px] text-[#556570]">Founding shops: $50 a month, live the same day.</span>
             <span className="mt-3 inline-flex items-center gap-1 text-[12.5px] font-extrabold text-[#00605A]">
               List your business <ArrowRight size={13} />
             </span>

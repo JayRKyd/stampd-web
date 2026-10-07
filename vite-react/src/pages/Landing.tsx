@@ -5,17 +5,16 @@ import {
   MiniPinCard, MiniTicket, MiniNotification, MiniPinCells,
   MerchantDirectory,
 } from '@/components/marketing'
-import { WaitlistForm } from '@/components/WaitlistForm'
 import { APP_STORE_URL, PLAY_STORE_URL } from '@/lib/support'
 
 const FAQS = [
   {
-    q: 'Is Stampd free?',
-    a: 'Completely free for customers, no subscription, no card required, ever. Merchants pay for the dashboard; you just collect the rewards.',
+    q: 'Does Stampd cost me anything?',
+    a: 'No. Customers never pay anything. Shops pay for Stampd; you just collect the rewards.',
   },
   {
     q: 'What if my favourite spot isn\'t on Stampd yet?',
-    a: 'Tell them about us! Any business, or independent pro, can join in about five minutes, and setup is free — we even build their card before they pay a thing.',
+    a: 'Tell them about us! Any business, or independent pro, can be set up in about ten minutes and live in the app the same day.',
   },
   {
     q: 'Do I need internet at the counter?',
@@ -62,15 +61,15 @@ export default function Landing() {
             <span className="text-[#c99a2e]">Every visit?</span>
           </h1>
           <p className="mt-6 text-[17px] md:text-[19px] lg:text-[20px] text-[#556570] leading-relaxed max-w-md lg:max-w-lg">
-            Stampd turns your loyalty into free stuff at the local spots you already
-            love. One PIN. Every shop. No punch cards.
+            Every visit to the local spots you already love counts toward a reward.
+            One PIN. Every shop. No punch cards.
           </p>
           <div className="mt-8 flex flex-wrap gap-3">
             <StoreBadge icon={Apple} store="App Store" sub="Download on the" href={APP_STORE_URL} />
             <StoreBadge icon={Play} store="Google Play" sub="Get it on" href={PLAY_STORE_URL} />
           </div>
           <p className="mt-6 text-[13px] text-[#74807E]">
-            Free forever for customers · Starting in Grand Bahama
+            Live in Grand Bahama · Nassau this November
           </p>
         </div>
 
@@ -214,8 +213,8 @@ export default function Landing() {
         </div>
       </section>
 
-      {/* ── Closing CTA / waitlist ── */}
-      <section id="waitlist" className="bg-white border-t border-black/5 scroll-mt-16">
+      {/* ── Closing CTA / download ── */}
+      <section id="download" className="bg-white border-t border-black/5 scroll-mt-16">
         <div className="w-[80%] max-w-[1100px] mx-auto py-20 lg:py-28 text-center flex flex-col items-center">
           <h2 className="text-[36px] md:text-[48px] lg:text-[64px] xl:text-[72px] font-extrabold tracking-[-0.035em] leading-[1.05]">
             Your favourite spots
@@ -223,13 +222,10 @@ export default function Landing() {
             <span className="text-[#c99a2e]">owe you one.</span>
           </h2>
           <p className="mt-5 text-[16px] lg:text-[18px] text-[#556570] max-w-md lg:max-w-lg mx-auto">
-            Stampd is launching soon on Grand Bahama. Drop your email and we'll
-            tell you the moment it's ready to download.
+            Download Stampd, get your PIN, and start collecting on your next visit.
+            Live in Grand Bahama now. Nassau this November.
           </p>
-          <div className="mt-8 w-full flex justify-center">
-            <WaitlistForm audience="customer" />
-          </div>
-          <div className="mt-8 flex flex-wrap justify-center gap-3 opacity-70">
+          <div className="mt-8 flex flex-wrap justify-center gap-3">
             <StoreBadge icon={Apple} store="App Store" sub="Download on the" href={APP_STORE_URL} />
             <StoreBadge icon={Play} store="Google Play" sub="Get it on" href={PLAY_STORE_URL} />
           </div>

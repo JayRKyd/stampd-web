@@ -4,8 +4,9 @@ import { createClient } from '@/lib/supabase/client'
 
 type Audience = 'customer' | 'merchant'
 
-// Email capture for the pre-launch waitlist. Writes to the `waitlist` table
-// (anon insert only). A repeat email resolves to the same "you're in" state.
+// Interest capture. Merchants use it to request a founding spot; the customer
+// variant is kept for campaigns. Writes to the `waitlist` table (anon insert
+// only). A repeat email resolves to the same "you're in" state.
 export function WaitlistForm({
   audience,
   dark = false,
@@ -53,9 +54,11 @@ export function WaitlistForm({
           <Check size={18} />
         </div>
         <div>
-          <p className="text-[15px] font-bold">You're on the list.</p>
+          <p className="text-[15px] font-bold">{audience === 'merchant' ? 'Got it.' : "You're on the list."}</p>
           <p className={`text-[13px] ${dark ? 'text-white/70' : 'text-[#556570]'}`}>
-            We'll email you the moment {audience === 'merchant' ? 'merchant sign-ups open' : 'Stampd launches'}.
+            {audience === 'merchant'
+              ? 'Jordy will reach out within a day to set up your card.'
+              : "We'll email you when Stampd reaches your island."}
           </p>
         </div>
       </div>
@@ -96,7 +99,7 @@ export function WaitlistForm({
               : 'bg-[#00605A] text-white hover:bg-[#024D48]'
           }`}
         >
-          {state === 'loading' ? 'Joining…' : 'Join waitlist'}
+          {state === 'loading' ? 'Sending…' : audience === 'merchant' ? 'Request a spot' : 'Keep me posted'}
         </button>
       </div>
       {error && (
