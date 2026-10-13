@@ -8,24 +8,6 @@ import { whatsappHref } from '@/lib/support'
 
 const PHONE_DISPLAY = '(242) 533-0878'
 
-const STEPS = [
-  {
-    num: '01',
-    title: 'Pick your reward',
-    desc: 'Buy 9, get the 10th free. Or any reward you choose. We set up the card with you in about ten minutes, and it is live in the app the same day.',
-  },
-  {
-    num: '02',
-    title: 'Staff type the PIN',
-    desc: 'Every customer has a 6-digit code in their app. A customer pays, your staff type the code on any phone or tablet. Stamped. First-timers join on that first stamp.',
-  },
-  {
-    num: '03',
-    title: 'Customers come back',
-    desc: 'Their card fills on their phone, their reward shows up on their phone, and when they drift off, their phone reminds them. You do nothing extra.',
-  },
-]
-
 const NETWORK = [
   'The Discover tab in the app lists every business on Stampd.',
   'Someone collecting stamps at the coffee shop sees your barbershop.',
@@ -101,80 +83,82 @@ export default function Merchants() {
         </div>
       </section>
 
-      {/* ── How it works ── */}
-      <section id="how" className="bg-white border-y border-black/5 scroll-mt-16">
-        <div className="w-[80%] max-w-[1600px] mx-auto py-20 lg:py-28">
-          <p className="text-[13px] md:text-[14px] font-extrabold tracking-[0.18em] text-[#00605A] mb-4">HOW IT WORKS</p>
-          <h2 className="text-[30px] md:text-[38px] lg:text-[44px] xl:text-[48px] font-extrabold tracking-[-0.03em] leading-tight mb-12 max-w-[18ch]">
-            Three steps. The third one runs itself.
-          </h2>
-          <div className="grid md:grid-cols-3 gap-10">
-            {STEPS.map(({ num, title, desc }) => (
-              <div key={num} className="rounded-3xl bg-[#F7F2E8] p-8">
-                <p className="text-[14px] font-extrabold tracking-widest mb-3" style={{ color: 'rgba(0,96,90,0.5)' }}>{num}</p>
-                <h3 className="text-[22px] font-extrabold tracking-tight mb-3">{title}</h3>
-                <p className="text-[15px] text-[#556570] leading-relaxed">{desc}</p>
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
+      {/* ── What $50 buys ── */}
+      <div className="bg-white border-y border-black/5">
+        <FiftyDollars />
+      </div>
 
-      {/* ── The counter ── */}
-      <section className="w-[80%] max-w-[1600px] mx-auto py-20 lg:py-28 grid lg:grid-cols-2 gap-16 items-center">
-        <div>
-          <p className="text-[13px] md:text-[14px] font-extrabold tracking-[0.18em] text-[#00605A] mb-4">AT THE COUNTER</p>
-          <h2 className="text-[30px] md:text-[38px] lg:text-[44px] xl:text-[48px] font-extrabold tracking-[-0.03em] leading-tight mb-5">
-            One tap per visit.
-            <br />
-            That's it.
-          </h2>
-          <p className="text-[15.5px] lg:text-[17px] text-[#556570] leading-relaxed max-w-md lg:max-w-lg">
-            No scanner, no hardware, no training beyond one sentence. It runs on
-            whatever is already at your counter: a phone, a tablet, the till. No
-            cards to print, hand out, find, lose, or forge.
-          </p>
-        </div>
-        <div className="flex justify-center" aria-hidden>
-          <div className="bg-white rounded-3xl p-8 rotate-1 shadow-sm">
-            <p className="text-[11px] font-semibold text-[#74807E] tracking-wider mb-3 text-center">CUSTOMER PIN</p>
-            <MiniPinCells />
-            <p className="text-[11px] text-[#74807E] mt-4 text-center">
-              <span className="font-semibold text-[#1A2B2A]">Tania Rolle</span> · 7/10 stamps · stamped
-            </p>
-          </div>
-        </div>
-      </section>
-
-      {/* ── Brings them back ── */}
-      <section className="bg-white border-y border-black/5">
-        <div className="w-[80%] max-w-[1600px] mx-auto py-20 lg:py-28 grid lg:grid-cols-2 gap-16 items-center">
-          <div className="relative flex justify-center py-6 order-last lg:order-first" aria-hidden>
-            <div className="space-y-3">
-              <MiniNotification
-                initials="YB" color="#00605a" badge="stamp"
-                title="Stamp at Your Business" body="8 of 10. Two more for Your Reward."
-                time="Tue" className="-rotate-1"
-              />
-              <MiniNotification
-                initials="YB" color="#b8922e" badge="reward"
-                title="It's been a while" body="You're close to a reward at Your Business. Stop by."
-                time="now" className="rotate-1 translate-x-4"
+      {/* ── How it works: three steps, each shown with the real thing ── */}
+      <section id="how" className="w-[80%] max-w-[1600px] mx-auto py-20 lg:py-28 scroll-mt-16">
+        <p className="text-[13px] md:text-[14px] font-extrabold tracking-[0.18em] text-[#00605A] mb-4">HOW IT WORKS</p>
+        <h2 className="text-[30px] md:text-[38px] lg:text-[44px] xl:text-[48px] font-extrabold tracking-[-0.03em] leading-tight max-w-[18ch]">
+          Three steps. The third one runs itself.
+        </h2>
+        <div className="mt-12 grid lg:grid-cols-3 gap-6">
+          {/* 1 · Your card */}
+          <div className="rounded-3xl bg-white border border-black/5 p-7 flex flex-col gap-5">
+            <div>
+              <p className="text-[13px] font-extrabold tracking-widest text-[#00605A]/60 mb-2">01</p>
+              <h3 className="text-[22px] font-extrabold tracking-tight">Pick your reward.</h3>
+              <p className="mt-2 text-[15px] text-[#556570] leading-relaxed">
+                Buy 9, get the 10th free, or anything you choose. We set the card up with you in about ten minutes. It's live in the app the same day.
+              </p>
+            </div>
+            <div className="flex justify-center py-2" aria-hidden>
+              <MiniStampCard
+                className="rotate-1 scale-[0.92] origin-center"
+                name="Your Business" category="Your Category" color="#00605a"
+                icon="star" filled={7} total={10} reward="Your Reward"
               />
             </div>
+            <p className="text-[12.5px] text-[#74807E] text-center">Your card, exactly as customers carry it</p>
           </div>
-          <div>
-            <p className="text-[13px] md:text-[14px] font-extrabold tracking-[0.18em] text-[#00605A] mb-4">WEEK THREE</p>
-            <h2 className="text-[30px] md:text-[38px] lg:text-[44px] xl:text-[48px] font-extrabold tracking-[-0.03em] leading-tight mb-5">
-              Stampd brings them
-              <br />
-              back for you.
-            </h2>
-            <p className="text-[15.5px] lg:text-[17px] text-[#556570] leading-relaxed max-w-md lg:max-w-lg">
-              Kayla is two stamps from her reward, so she picks you over the shop
-              next door. Marco hasn't visited in three weeks, so his phone reminds
-              him. No texting customers yourself. It just happens.
-            </p>
+
+          {/* 2 · The counter */}
+          <div className="rounded-3xl bg-white border border-black/5 p-7 flex flex-col gap-5">
+            <div>
+              <p className="text-[13px] font-extrabold tracking-widest text-[#00605A]/60 mb-2">02</p>
+              <h3 className="text-[22px] font-extrabold tracking-tight">Staff type the PIN.</h3>
+              <p className="mt-2 text-[15px] text-[#556570] leading-relaxed">
+                A customer pays and says their six-digit code. Staff type it on any phone or tablet. Stamped. No scanner, no hardware, no cards to lose or forge.
+              </p>
+            </div>
+            <div className="flex justify-center py-2" aria-hidden>
+              <div className="bg-[#F7F2E8] rounded-3xl p-6 -rotate-1">
+                <p className="text-[11px] font-semibold text-[#74807E] tracking-wider mb-3 text-center">CUSTOMER PIN</p>
+                <MiniPinCells />
+                <p className="text-[11px] text-[#74807E] mt-4 text-center">
+                  <span className="font-semibold text-[#1A2B2A]">Tania Rolle</span> · 7/10 stamps · stamped
+                </p>
+              </div>
+            </div>
+            <p className="text-[12.5px] text-[#74807E] text-center">First-timers join on their first stamp</p>
+          </div>
+
+          {/* 3 · They come back */}
+          <div className="rounded-3xl bg-white border border-black/5 p-7 flex flex-col gap-5">
+            <div>
+              <p className="text-[13px] font-extrabold tracking-widest text-[#00605A]/60 mb-2">03</p>
+              <h3 className="text-[22px] font-extrabold tracking-tight">Customers come back.</h3>
+              <p className="mt-2 text-[15px] text-[#556570] leading-relaxed">
+                Kayla is two stamps from her reward, so she picks you over the shop next door. Marco hasn't been in three weeks, so his phone reminds him. You text nobody.
+              </p>
+            </div>
+            <div className="flex justify-center py-2" aria-hidden>
+              <div className="space-y-3 scale-[0.92] origin-center">
+                <MiniNotification
+                  initials="YB" color="#00605a" badge="stamp"
+                  title="Stamp at Your Business" body="8 of 10. Two more for Your Reward."
+                  time="Tue" className="-rotate-1"
+                />
+                <MiniNotification
+                  initials="YB" color="#b8922e" badge="reward"
+                  title="It's been a while" body="You're close to a reward at Your Business. Stop by."
+                  time="now" className="rotate-1 translate-x-3"
+                />
+              </div>
+            </div>
+            <p className="text-[12.5px] text-[#74807E] text-center">Reminders go out on their own</p>
           </div>
         </div>
       </section>
@@ -254,11 +238,6 @@ export default function Merchants() {
           </div>
         </div>
       </section>
-
-      {/* ── What $50 buys ── */}
-      <div className="bg-[#F7F2E8] border-t border-black/5">
-        <FiftyDollars />
-      </div>
 
       {/* ── Pricing ── */}
       <section className="bg-white border-y border-black/5">
