@@ -3,6 +3,7 @@ import {
   MarketingNav, MarketingFooter, MiniStampCard, MiniPinCells, MiniNotification, MiniDashboard,
 } from '@/components/marketing'
 import { WaitlistForm } from '@/components/WaitlistForm'
+import { FiftyDollars } from '@/components/FiftyDollars'
 import { whatsappHref } from '@/lib/support'
 
 const PHONE_DISPLAY = '(242) 533-0878'
@@ -253,6 +254,11 @@ export default function Merchants() {
           </div>
         </div>
       </section>
+
+      {/* ── What $50 buys ── */}
+      <div className="bg-[#F7F2E8] border-t border-black/5">
+        <FiftyDollars />
+      </div>
 
       {/* ── Pricing ── */}
       <section className="bg-white border-y border-black/5">
