@@ -18,8 +18,7 @@ import {
 } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
 import { AdminMerchantSetup } from '@/components/AdminMerchantSetup'
-import { SpecialComposer } from '@/components/SpecialComposer'
-import { SpecialsHistory } from '@/components/SpecialsHistory'
+import { SpecialsWorkspace } from '@/pages/dashboard/Specials'
 
 const PAGE_SIZE = 25
 
@@ -64,7 +63,6 @@ export default function Admin() {
   const [setupFor, setSetupFor] = useState<{ id: string; name: string } | null>(null)
   // Post a special on a merchant's behalf (busy owners text it in)
   const [postFor, setPostFor] = useState<{ id: string; name: string } | null>(null)
-  const [postRefresh, setPostRefresh] = useState(0)
 
   useEffect(() => {
     async function load() {
@@ -445,16 +443,8 @@ export default function Admin() {
                 <X size={16} />
               </button>
             </div>
-            <div className="p-5 flex flex-col gap-6">
-              <SpecialComposer
-                merchantId={postFor.id}
-                merchantName={postFor.name}
-                onPosted={() => setPostRefresh(k => k + 1)}
-              />
-              <div>
-                <h3 className="text-[13px] font-semibold text-gray-900 mb-2">Their posts</h3>
-                <SpecialsHistory merchantId={postFor.id} refreshKey={postRefresh} />
-              </div>
+            <div className="p-5">
+              <SpecialsWorkspace merchantId={postFor.id} merchantName={postFor.name} compact />
             </div>
           </div>
         </div>

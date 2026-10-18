@@ -1,9 +1,10 @@
 import { useCallback, useEffect, useState } from 'react'
-import { Ban } from 'lucide-react'
+import { Ban, CalendarX, Plus } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
 
-// Every post a merchant has made, newest first, with the honest numbers
-// once the nightly job has filled them in.
+// Every post a merchant has made or planned, newest first, with the honest
+// numbers once the nightly job has filled them in. Also exports the week
+// strip (the "mini campaign" view) built from the same rows.
 
 export interface SpecialRow {
   id: string
@@ -15,6 +16,7 @@ export interface SpecialRow {
   ends_on: string
   ends_at_time: string | null
   tag: string
+  status: 'scheduled' | 'sent' | 'cancelled'
   sent_at: string
   ended_at: string | null
   running: boolean
@@ -26,28 +28,79 @@ export interface SpecialRow {
 }
 
 function when(iso: string) {
-  const d = new Date(iso)
-  return d.toLocaleString('en-US', { weekday: 'short', hour: 'numeric', minute: '2-digit' }).replace(':00', '')
+  return new Date(iso).toLocaleString('en-US', { weekday: 'short', hour: 'numeric', minute: '2-digit' }).replace(':00', '')
+}
+function whenFull(iso: string) {
+  return new Date(iso).toLocaleString('en-US', { weekday: 'long', month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' }).replace(':00', '')
+}
+function ymd(d: Date) {
+  const pad = (n: number) => String(n).padStart(2, '0')
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`
 }
 
-export function SpecialsHistory({ merchantId, refreshKey = 0 }: { merchantId: string; refreshKey?: number }) {
+export function useSpecials(merchantId: string, refreshKey = 0) {
   const [rows, setRows] = useState<SpecialRow[] | null>(null)
-  const [ending, setEnding] = useState<string | null>(null)
-
   const load = useCallback(async () => {
     const supabase = createClient()
     const { data } = await supabase.rpc('list_merchant_specials', { p_merchant_id: merchantId })
     setRows((data as SpecialRow[] | null) ?? [])
   }, [merchantId])
-
   useEffect(() => { load() }, [load, refreshKey])
+  return { rows, reload: load }
+}
+
+// Seven days from today. Each day shows what's planned or running; an empty
+// day is a button that hands the date to the composer.
+export function SpecialsWeek({ rows, onPickDay }: { rows: SpecialRow[] | null; onPickDay: (day: string) => void }) {
+  const days = Array.from({ length: 7 }, (_, i) => { const d = new Date(); d.setDate(d.getDate() + i); return d })
+  return (
+    <div>
+      <p className="text-[11px] font-semibold uppercase tracking-wider text-gray-500 mb-2">This week</p>
+      <div className="grid grid-cols-7 gap-1.5">
+        {days.map((d, i) => {
+          const key = ymd(d)
+          const planned = (rows ?? []).find(r =>
+            r.status === 'scheduled' ? ymd(new Date(r.sent_at)) === key
+            : r.status === 'sent' && !r.ended_at && r.starts_on <= key && key <= r.ends_on)
+          const label = i === 0 ? 'Today' : d.toLocaleDateString('en-US', { weekday: 'short' })
+          return planned ? (
+            <div key={key} className={`rounded-xl p-2 min-h-[76px] flex flex-col gap-1 border ${planned.status === 'scheduled' ? 'bg-amber-50 border-amber-200' : 'bg-brand-50 border-brand-200'}`}>
+              <span className="text-[10px] font-bold uppercase tracking-wider text-gray-500">{label}</span>
+              <span className="text-[11px] font-semibold text-gray-800 leading-tight line-clamp-3">{planned.text}</span>
+              <span className="text-[10px] text-gray-500 mt-auto">{planned.status === 'scheduled' ? 'Planned' : 'Running'}</span>
+            </div>
+          ) : (
+            <button
+              key={key}
+              type="button"
+              onClick={() => onPickDay(key)}
+              className="rounded-xl p-2 min-h-[76px] flex flex-col gap-1 border border-dashed border-gray-300 bg-white hover:bg-gray-50 text-left"
+              title={`Plan a post for ${label}`}
+            >
+              <span className="text-[10px] font-bold uppercase tracking-wider text-gray-500">{label}</span>
+              <span className="mt-auto inline-flex items-center gap-1 text-[11px] font-semibold text-brand-600"><Plus size={11} /> Plan</span>
+            </button>
+          )
+        })}
+      </div>
+    </div>
+  )
+}
+
+export function SpecialsHistory({ rows, reload }: { rows: SpecialRow[] | null; reload: () => Promise<void> }) {
+  const [acting, setActing] = useState<string | null>(null)
 
   async function endEarly(id: string) {
-    setEnding(id)
-    const supabase = createClient()
-    await supabase.rpc('end_special', { p_id: id })
-    await load()
-    setEnding(null)
+    setActing(id)
+    await createClient().rpc('end_special', { p_id: id })
+    await reload()
+    setActing(null)
+  }
+  async function cancel(id: string) {
+    setActing(id)
+    await createClient().rpc('cancel_special', { p_id: id })
+    await reload()
+    setActing(null)
   }
 
   if (rows === null) {
@@ -62,11 +115,38 @@ export function SpecialsHistory({ merchantId, refreshKey = 0 }: { merchantId: st
     )
   }
 
+  const scheduled = rows.filter(r => r.status === 'scheduled').sort((a, b) => a.sent_at.localeCompare(b.sent_at))
   const running = rows.filter(r => r.running)
-  const past = rows.filter(r => !r.running)
+  const past = rows.filter(r => r.status === 'sent' && !r.running)
 
   return (
     <div className="flex flex-col gap-4">
+      {scheduled.length > 0 && (
+        <div className="flex flex-col gap-2">
+          <p className="text-[11px] font-semibold uppercase tracking-wider text-gray-500">Planned</p>
+          {scheduled.map(r => (
+            <div key={r.id} className="border border-amber-200 bg-amber-50/40 rounded-xl p-4 flex flex-wrap items-center gap-3">
+              {r.image_url && <img src={r.image_url} alt="" className="w-12 h-[60px] object-cover rounded-lg border border-gray-200" />}
+              <div className="flex-1 min-w-[200px]">
+                <p className="text-[14px] font-semibold text-gray-900">{r.text}</p>
+                <p className="text-[12px] text-gray-500 mt-0.5">
+                  Goes out {whenFull(r.sent_at)}
+                  {r.ends_on !== r.starts_on && ` · runs ${Math.round((new Date(r.ends_on).getTime() - new Date(r.starts_on).getTime()) / 86400000) + 1} days`}
+                  {r.posted_by_admin && ' · planned by Stampd'}
+                </p>
+              </div>
+              <button
+                onClick={() => cancel(r.id)}
+                disabled={acting === r.id}
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-gray-200 bg-white text-gray-600 text-[12px] font-semibold hover:bg-gray-50 disabled:opacity-60"
+              >
+                <CalendarX size={13} /> {acting === r.id ? 'Cancelling…' : 'Cancel'}
+              </button>
+            </div>
+          ))}
+        </div>
+      )}
+
       {running.length > 0 && (
         <div className="flex flex-col gap-2">
           <p className="text-[11px] font-semibold uppercase tracking-wider text-gray-500">Running now</p>
@@ -84,11 +164,11 @@ export function SpecialsHistory({ merchantId, refreshKey = 0 }: { merchantId: st
               </div>
               <button
                 onClick={() => endEarly(r.id)}
-                disabled={ending === r.id}
+                disabled={acting === r.id}
                 className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-gray-200 bg-white text-gray-600 text-[12px] font-semibold hover:bg-gray-50 disabled:opacity-60"
                 title="Take it down now, for example if you sold out"
               >
-                <Ban size={13} /> {ending === r.id ? 'Ending…' : 'End early'}
+                <Ban size={13} /> {acting === r.id ? 'Ending…' : 'End early'}
               </button>
             </div>
           ))}

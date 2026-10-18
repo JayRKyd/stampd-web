@@ -13,6 +13,8 @@ type Tag = 'SPECIAL' | 'TODAY' | 'UNTIL' | 'ENDS' | 'COUNTDOWN'
 interface Preview {
   ok: boolean
   reason?: string
+  scheduled?: boolean
+  send_at_local?: string
   title?: string
   body?: string
   recipients?: number
@@ -25,9 +27,29 @@ interface Props {
   merchantId: string
   merchantName: string
   onPosted?: () => void
+  // 'YYYY-MM-DD' from the week strip: opens the composer set to send that day at 9am
+  plannedDay?: string | null
 }
 
 const MAX = 80
+
+// datetime-local string for a given day at 9am (tomorrow by default)
+function nineAm(day?: string): string {
+  if (day) return `${day}T09:00`
+  const d = new Date(); d.setDate(d.getDate() + 1)
+  const pad = (n: number) => String(n).padStart(2, '0')
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T09:00`
+}
+
+// Server gives Nassau-local 'YYYY-MM-DD HH:MM:SS'; the picker wants 'YYYY-MM-DDTHH:MM'
+function toLocalInput(ts: string): string {
+  return ts.replace(' ', 'T').slice(0, 16)
+}
+
+function describeSendAt(local: string): string {
+  const d = new Date(local)
+  return d.toLocaleString('en-US', { weekday: 'long', month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' }).replace(':00', '')
+}
 
 // Plain-language reasons for every refusal the server can return
 function explain(p: Preview): string {
@@ -44,8 +66,9 @@ function explain(p: Preview): string {
     case 'bad_run_length': return 'A post can run from 1 to 7 days.'
     case 'end_time_passed': return 'That end time has already passed today.'
     case 'quiet_hours': return `Posts send between 9am and 8pm. Next window: ${whenNext(p.next_allowed_at)}.`
-    case 'daily_cap': return `You've sent today's post. You can send again ${whenNext(p.next_allowed_at)}.`
+    case 'daily_cap': return `There's already a post for that day. Next open day: ${whenNext(p.next_allowed_at)}.`
     case 'monthly_cap': return `You've used ${p.month_used} of ${p.month_cap} posts this month.`
+    case 'too_far_ahead': return 'You can plan up to two weeks ahead.'
     default: return 'Something went wrong. Try again.'
   }
 }
@@ -54,9 +77,12 @@ function whenNext(ts?: string): string {
   if (!ts) return 'tomorrow at 9am'
   const d = new Date(ts.replace(' ', 'T'))
   const today = new Date()
-  const sameDay = d.getFullYear() === today.getFullYear() && d.getMonth() === today.getMonth() && d.getDate() === today.getDate()
+  const tomorrow = new Date(); tomorrow.setDate(today.getDate() + 1)
+  const same = (a: Date, b: Date) => a.getFullYear() === b.getFullYear() && a.getMonth() === b.getMonth() && a.getDate() === b.getDate()
   const time = d.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' }).replace(':00', '')
-  return sameDay ? `today at ${time}` : `tomorrow at ${time}`
+  if (same(d, today)) return `today at ${time}`
+  if (same(d, tomorrow)) return `tomorrow at ${time}`
+  return `${d.toLocaleDateString('en-US', { weekday: 'long' })} at ${time}`
 }
 
 function tagLabel(tag: Tag, endsAt: string, days: number): string {
@@ -74,21 +100,34 @@ function tagLabel(tag: Tag, endsAt: string, days: number): string {
   return tag === 'TODAY' ? 'TODAY' : 'SPECIAL'
 }
 
-export function SpecialComposer({ merchantId, merchantName, onPosted }: Props) {
+export function SpecialComposer({ merchantId, merchantName, onPosted, plannedDay }: Props) {
   const [kind, setKind] = useState<Kind>('special')
   const [text, setText] = useState('')
   const [days, setDays] = useState(1)
   const [endsAt, setEndsAt] = useState('')          // 'HH:MM' or ''
   const [tag, setTag] = useState<Tag>('SPECIAL')
   const [earnsStamp, setEarnsStamp] = useState(false)
+  const [when, setWhen] = useState<'now' | 'later'>('now')
+  const [sendAt, setSendAt] = useState(() => nineAm())  // datetime-local
   const [file, setFile] = useState<File | null>(null)
   const [localPreview, setLocalPreview] = useState<string | null>(null)
   const [preview, setPreview] = useState<Preview | null>(null)
   const [checking, setChecking] = useState(false)
   const [sending, setSending] = useState(false)
-  const [sent, setSent] = useState<{ recipients: number } | null>(null)
+  const [sent, setSent] = useState<{ recipients: number; scheduledFor?: string } | null>(null)
   const [error, setError] = useState('')
   const fileRef = useRef<HTMLInputElement>(null)
+
+  // A day picked on the week strip opens the composer ready for that morning.
+  // The value carries a '#nonce' suffix so picking the same day twice still fires.
+  useEffect(() => {
+    if (!plannedDay) return
+    setWhen('later')
+    setSendAt(nineAm(plannedDay.split('#')[0]))
+    setSent(null)
+  }, [plannedDay])
+
+  const sendAtIso = when === 'later' && sendAt ? new Date(sendAt).toISOString() : null
 
   // Default tag follows the type; a tag that no longer applies falls back
   useEffect(() => {
@@ -112,13 +151,20 @@ export function SpecialComposer({ merchantId, merchantName, onPosted }: Props) {
         p_text: text,
         p_days: days,
         p_ends_at_time: endsAt || null,
+        p_send_at: sendAtIso,
       })
       if (!alive) return
-      setPreview(rpcErr ? { ok: false } : (data as Preview))
+      const p: Preview = rpcErr ? { ok: false } : (data as Preview)
+      // Outside posting hours, "now" isn't possible: flip to the next open window
+      if (!p.ok && p.reason === 'quiet_hours' && when === 'now' && p.next_allowed_at) {
+        setWhen('later')
+        setSendAt(toLocalInput(p.next_allowed_at))
+      }
+      setPreview(p)
       setChecking(false)
     }, 400)
     return () => { alive = false; clearTimeout(t) }
-  }, [text, days, endsAt, merchantId])
+  }, [text, days, endsAt, merchantId, sendAtIso, when])
 
   function pickFile(f: File | null) {
     setFile(f)
@@ -160,19 +206,21 @@ export function SpecialComposer({ merchantId, merchantName, onPosted }: Props) {
       p_days: days,
       p_ends_at_time: endsAt || null,
       p_tag: tag,
+      p_send_at: sendAtIso,
     })
     setSending(false)
-    const res = data as Preview & { recipients?: number }
+    const res = data as Preview & { recipients?: number; send_at?: string }
     if (rpcErr || !res?.ok) {
       setError(explain(res ?? { ok: false }))
       return
     }
-    setSent({ recipients: res.recipients ?? 0 })
+    setSent({ recipients: res.recipients ?? 0, scheduledFor: res.scheduled ? sendAt : undefined })
     onPosted?.()
   }
 
   function reset() {
     setText(''); setDays(1); setEndsAt(''); setEarnsStamp(false); pickFile(null)
+    setWhen('now'); setSendAt(nineAm())
     setPreview(null); setSent(null); setError('')
   }
 
@@ -188,10 +236,11 @@ export function SpecialComposer({ merchantId, merchantName, onPosted }: Props) {
         <div className="w-11 h-11 rounded-full bg-green-50 text-green-600 flex items-center justify-center">
           <Check size={22} strokeWidth={2.5} />
         </div>
-        <p className="text-[15px] font-semibold text-gray-900">Posted.</p>
+        <p className="text-[15px] font-semibold text-gray-900">{sent.scheduledFor ? 'Scheduled.' : 'Posted.'}</p>
         <p className="text-[13px] text-gray-500 max-w-sm">
-          Sent to {sent.recipients} {sent.recipients === 1 ? 'customer' : 'customers'} and listed under Today for everyone on Stampd.
-          Tomorrow you’ll see how many came in.
+          {sent.scheduledFor
+            ? <>Goes out {describeSendAt(sent.scheduledFor)} to {sent.recipients} {sent.recipients === 1 ? 'customer' : 'customers'}, and onto Today for everyone on Stampd. You can cancel it from the list below until then.</>
+            : <>Sent to {sent.recipients} {sent.recipients === 1 ? 'customer' : 'customers'} and listed under Today for everyone on Stampd. Tomorrow you’ll see how many came in.</>}
         </p>
         <button onClick={reset} className="mt-1 px-4 py-2 rounded-lg border border-gray-200 text-[13px] font-semibold text-gray-700 hover:bg-gray-50">
           Done
@@ -274,6 +323,36 @@ export function SpecialComposer({ merchantId, merchantName, onPosted }: Props) {
           <p className="text-[12px] text-gray-400 mt-1.5">No flyer? Stampd draws a card in your colours with your line on it.</p>
         </div>
 
+        {/* When it goes out */}
+        <div>
+          <p className="text-[11px] font-semibold uppercase tracking-wider text-gray-500 mb-1.5">When</p>
+          <div className="flex flex-wrap items-center gap-2">
+            <button type="button" onClick={() => setWhen('now')}
+              className={`px-3 py-1.5 rounded-lg text-[12px] font-semibold transition-colors ${when === 'now' ? 'bg-brand-500 text-white' : 'bg-white border border-gray-200 text-gray-600 hover:bg-gray-50'}`}>
+              Send now
+            </button>
+            <button type="button" onClick={() => setWhen('later')}
+              className={`px-3 py-1.5 rounded-lg text-[12px] font-semibold transition-colors ${when === 'later' ? 'bg-brand-500 text-white' : 'bg-white border border-gray-200 text-gray-600 hover:bg-gray-50'}`}>
+              Send later
+            </button>
+            {when === 'later' && (
+              <input
+                id="special-send-at"
+                type="datetime-local"
+                value={sendAt}
+                onChange={e => setSendAt(e.target.value)}
+                className="px-3 py-1.5 rounded-lg border border-gray-200 text-[13px] bg-white"
+                aria-label="Send date and time"
+              />
+            )}
+          </div>
+          <p className="text-[12px] text-gray-400 mt-1.5">
+            {when === 'later'
+              ? 'Plan up to two weeks ahead, one post per day. Sends between 9am and 8pm.'
+              : 'Goes out the moment you post, between 9am and 8pm.'}
+          </p>
+        </div>
+
         {/* Timing and tag */}
         <div className="grid sm:grid-cols-3 gap-3">
           <div>
@@ -314,7 +393,7 @@ export function SpecialComposer({ merchantId, merchantName, onPosted }: Props) {
         <div className="flex flex-wrap items-center gap-3 pt-2 border-t border-gray-100">
           <p className="text-[13px] text-gray-600 flex-1 min-w-[200px]">
             {preview?.ok
-              ? <>Goes to <span className="font-semibold text-gray-900">{preview.recipients} {preview.recipients === 1 ? 'customer' : 'customers'}</span> and onto Today for everyone on Stampd. {preview.month_used}/{preview.month_cap} used this month.</>
+              ? <>{preview.scheduled ? `Goes out ${describeSendAt(sendAt)} to` : 'Goes to'} <span className="font-semibold text-gray-900">{preview.recipients} {preview.recipients === 1 ? 'customer' : 'customers'}</span> and onto Today for everyone on Stampd. {preview.month_used}/{preview.month_cap} used that month.</>
               : checking ? 'Checking…' : 'Type your line to see who it reaches.'}
           </p>
           <button
@@ -323,7 +402,7 @@ export function SpecialComposer({ merchantId, merchantName, onPosted }: Props) {
             disabled={!preview?.ok || sending}
             className="inline-flex items-center gap-2 px-5 py-2.5 rounded-lg bg-brand-500 text-white text-[13px] font-semibold hover:bg-brand-600 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
           >
-            <Send size={14} /> {sending ? 'Posting…' : 'Post now'}
+            <Send size={14} /> {sending ? (preview?.scheduled ? 'Scheduling…' : 'Posting…') : (preview?.scheduled ? 'Schedule' : 'Post now')}
           </button>
         </div>
         {error && <p className="text-[13px] text-amber-700">{error}</p>}
