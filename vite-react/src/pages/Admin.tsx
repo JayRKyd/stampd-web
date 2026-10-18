@@ -13,9 +13,13 @@ import {
   ChevronRight,
   ArrowLeft,
   Settings2,
+  Megaphone,
+  X,
 } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
 import { AdminMerchantSetup } from '@/components/AdminMerchantSetup'
+import { SpecialComposer } from '@/components/SpecialComposer'
+import { SpecialsHistory } from '@/components/SpecialsHistory'
 
 const PAGE_SIZE = 25
 
@@ -58,6 +62,9 @@ export default function Admin() {
   const [sortDesc, setSortDesc] = useState(true)
   const [page, setPage] = useState(1)
   const [setupFor, setSetupFor] = useState<{ id: string; name: string } | null>(null)
+  // Post a special on a merchant's behalf (busy owners text it in)
+  const [postFor, setPostFor] = useState<{ id: string; name: string } | null>(null)
+  const [postRefresh, setPostRefresh] = useState(0)
 
   useEffect(() => {
     async function load() {
@@ -348,6 +355,16 @@ export default function Admin() {
                         </td>
                         <td className="px-4 py-3">
                           <div className="flex items-center justify-end gap-1.5">
+                            {merchant.is_active && (
+                              <button
+                                onClick={() => setPostFor({ id: merchant.id, name: merchant.business_name })}
+                                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-gray-200 text-gray-600 text-[12px] font-semibold hover:bg-gray-50 transition-colors"
+                                title="Post a special or update for this merchant"
+                              >
+                                <Megaphone size={14} />
+                                <span className="hidden lg:inline">Post</span>
+                              </button>
+                            )}
                             <button
                               onClick={() => setSetupFor({ id: merchant.id, name: merchant.business_name })}
                               className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-gray-200 text-gray-600 text-[12px] font-semibold hover:bg-gray-50 transition-colors"
@@ -415,6 +432,33 @@ export default function Admin() {
           )}
         </div>
       </main>
+
+      {postFor && (
+        <div className="fixed inset-0 z-40 bg-black/40 flex items-start justify-center overflow-y-auto p-4 sm:p-8" onClick={() => setPostFor(null)}>
+          <div className="w-full max-w-4xl bg-gray-50 rounded-2xl shadow-xl" onClick={e => e.stopPropagation()}>
+            <div className="flex items-center justify-between gap-3 px-5 py-4 border-b border-gray-200 bg-white rounded-t-2xl">
+              <div className="min-w-0">
+                <h2 className="text-[16px] font-semibold text-gray-900 truncate">Post for {postFor.name}</h2>
+                <p className="text-[12px] text-gray-500">Same rules as the merchant: one a day, 9am to 8pm, counts against their monthly posts. Shows in their history as posted by Stampd.</p>
+              </div>
+              <button onClick={() => setPostFor(null)} aria-label="Close" className="w-8 h-8 rounded-lg hover:bg-gray-100 flex items-center justify-center text-gray-500 shrink-0">
+                <X size={16} />
+              </button>
+            </div>
+            <div className="p-5 flex flex-col gap-6">
+              <SpecialComposer
+                merchantId={postFor.id}
+                merchantName={postFor.name}
+                onPosted={() => setPostRefresh(k => k + 1)}
+              />
+              <div>
+                <h3 className="text-[13px] font-semibold text-gray-900 mb-2">Their posts</h3>
+                <SpecialsHistory merchantId={postFor.id} refreshKey={postRefresh} />
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
       {setupFor && (
         <AdminMerchantSetup

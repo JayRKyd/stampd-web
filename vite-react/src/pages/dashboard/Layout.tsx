@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react'
 import { Outlet, NavLink, useNavigate, useLocation } from 'react-router-dom'
 import {
   LayoutDashboard, Stamp, Users, BarChart3,
-  CreditCard, Bell, Settings, LogOut, Menu, ChevronRight, BookOpen, Clock, Lock,
+  CreditCard, Bell, Settings, LogOut, Menu, ChevronRight, BookOpen, Clock, Lock, Megaphone,
 } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
 import { MerchantStatusProvider } from '@/lib/merchantStatus'
@@ -12,6 +12,7 @@ import { DashboardTour, shouldStartDashboardTour } from '@/components/DashboardT
 const NAV_ITEMS = [
   { to: '/dashboard',     icon: LayoutDashboard, label: 'Dashboard' },
   { to: '/stamp',         icon: Stamp,           label: 'Issue Stamp', requiresApproval: true },
+  { to: '/specials',      icon: Megaphone,       label: 'Specials', requiresApproval: true },
   { to: '/customers',     icon: Users,           label: 'Customers' },
   { to: '/analytics',     icon: BarChart3,       label: 'Analytics' },
   { to: '/card',          icon: CreditCard,      label: 'My Card' },
