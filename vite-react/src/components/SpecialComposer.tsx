@@ -225,8 +225,8 @@ export function SpecialComposer({ merchantId, merchantName, onPosted, plannedDay
   }
 
   const bodyLine = text.trim()
-    ? `${text.trim()}${/[.!?]$/.test(text.trim()) ? '' : '.'} Stop by.`
-    : 'What’s on today? Stop by.'
+    ? `${text.trim()}${/[.!?]$/.test(text.trim()) ? '' : '.'} Stop by!`
+    : 'What’s on today? Stop by!'
   const remaining = MAX - text.length
   const blocked = preview && !preview.ok
 
@@ -287,7 +287,7 @@ export function SpecialComposer({ merchantId, merchantName, onPosted, plannedDay
               placeholder="Half price on large smoothies until 3pm"
               className="flex-1 min-w-0 border-0 outline-none text-[15px] font-medium text-gray-900 placeholder:text-gray-400 bg-transparent"
             />
-            <span className="shrink-0 text-[13px] font-semibold text-brand-600 bg-brand-50 px-2 py-1 rounded-md">Stop by.</span>
+            <span className="shrink-0 text-[13px] font-semibold text-brand-600 bg-brand-50 px-2 py-1 rounded-md">Stop by!</span>
           </div>
           <div className="flex justify-between mt-1.5 text-[12px]">
             <span className={blocked ? 'text-amber-700' : 'text-gray-500'}>
