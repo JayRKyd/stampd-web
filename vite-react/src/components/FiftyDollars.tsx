@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { ArrowRight, Check, Printer, MessageCircle, HelpCircle, User } from 'lucide-react'
+import { ArrowRight, Check, Stamp, Megaphone, User } from 'lucide-react'
 
 const MONTHLY = 50
 const PER_DAY = (MONTHLY / 30.4).toFixed(2)
@@ -7,10 +7,18 @@ const PER_DAY = (MONTHLY / 30.4).toFixed(2)
 // Fifty first-time customers; 3 in 10 come back; 5 of those cover the fee.
 const PROOF_DOTS = Array.from({ length: 50 }, (_, i) => (i < 5 ? 'need' : i < 15 ? 'back' : 'new'))
 
-const REPLACES = [
-  { icon: Printer, title: 'Printing punch cards', desc: 'Printed, handed out, lost, reprinted. Every month.' },
-  { icon: MessageCircle, title: 'A texting tool', desc: "And the spreadsheet of numbers you'd need to use it." },
-  { icon: HelpCircle, title: 'Guessing', desc: 'Who your regulars are. Who stopped coming. Which day pays the rent.' },
+// The two jobs the fee covers. Both run inside the one app customers already have.
+const JOBS = [
+  {
+    icon: Stamp,
+    title: 'A loyalty card that brings them back',
+    desc: "Every visit earns a stamp on their phone. A card they're filling up is the reason they pick you when they can't decide where to go.",
+  },
+  {
+    icon: Megaphone,
+    title: 'A way to speak to your regulars',
+    desc: "Post a special once. It lands on the phones of everyone who's earned a stamp from you, and on the island board for everyone else.",
+  },
 ]
 
 export function FiftyDollars() {
@@ -92,18 +100,17 @@ export function FiftyDollars() {
         </div>
       </div>
 
-      {/* What it replaces */}
+      {/* The two jobs */}
       <div>
-        <p className="text-[12px] font-extrabold tracking-[0.16em] text-[#74807E] mb-3">WHAT IT REPLACES</p>
-        <div className="grid sm:grid-cols-3 gap-4">
-          {REPLACES.map(({ icon: Icon, title, desc }) => (
-            <div key={title} className="rounded-3xl bg-white border border-black/5 p-6 flex flex-col gap-3">
-              <span className="relative w-12 h-12 rounded-2xl bg-[#00605A]/10 flex items-center justify-center">
+        <p className="text-[12px] font-extrabold tracking-[0.16em] text-[#74807E] mb-3">TWO JOBS. ONE PRICE.</p>
+        <div className="grid sm:grid-cols-2 gap-4">
+          {JOBS.map(({ icon: Icon, title, desc }) => (
+            <div key={title} className="rounded-3xl bg-white border border-black/5 p-6 lg:p-7 flex flex-col gap-3">
+              <span className="w-12 h-12 rounded-2xl bg-[#00605A]/10 flex items-center justify-center">
                 <Icon size={24} className="text-[#00605A]" strokeWidth={2} />
-                <span className="absolute left-2.5 right-2.5 top-1/2 h-[3px] bg-[#c99a2e] rounded-full -rotate-[35deg]" aria-hidden />
               </span>
-              <h3 className="text-[17px] font-extrabold tracking-tight">{title}</h3>
-              <p className="text-[14px] text-[#556570]">{desc}</p>
+              <h3 className="text-[18px] lg:text-[20px] font-extrabold tracking-tight">{title}</h3>
+              <p className="text-[14.5px] lg:text-[15.5px] text-[#556570] leading-relaxed">{desc}</p>
             </div>
           ))}
         </div>
