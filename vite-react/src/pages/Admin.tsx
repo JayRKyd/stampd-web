@@ -472,7 +472,7 @@ export default function Admin() {
 
       {giftFor && (
         <div className="fixed inset-0 z-40 bg-black/40 flex items-start justify-center overflow-y-auto p-4 sm:p-8" onClick={() => setGiftFor(null)}>
-          <div className="w-full max-w-3xl bg-gray-50 rounded-2xl shadow-xl" onClick={e => e.stopPropagation()}>
+          <div className="w-full max-w-5xl bg-gray-50 rounded-2xl shadow-xl" onClick={e => e.stopPropagation()}>
             <div className="flex items-center justify-between gap-3 px-5 py-4 border-b border-gray-200 bg-white rounded-t-2xl">
               <div className="min-w-0">
                 <h2 className="text-[16px] font-semibold text-gray-900 truncate">Gift cards for {giftFor.name}</h2>

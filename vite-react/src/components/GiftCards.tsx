@@ -133,8 +133,44 @@ function StaffPinGate({ s, onPass, onCancel }: { s: ReturnType<typeof useStaff>;
 
 const inputClass = 'w-full px-3 py-2.5 rounded-lg border border-gray-200 bg-gray-50 text-[13px] text-gray-900 focus:outline-none focus:border-brand-500 focus:ring-1 focus:ring-brand-500/20 transition-all placeholder:text-gray-300'
 
+// The card as the recipient will see it in the app, drawn live from the form
+function CardPreview({ merchantName, logoUrl, color, amountCents, forName, fromName, note }: {
+  merchantName: string; logoUrl: string | null; color: string; amountCents: number | null; forName: string; fromName: string; note: string
+}) {
+  return (
+    <div className="rounded-2xl p-5 text-white flex flex-col gap-4 shadow-lg" style={{ backgroundColor: color }}>
+      <div className="flex items-center gap-3">
+        <div className="w-10 h-10 rounded-xl bg-[#F7F2E8] flex items-center justify-center overflow-hidden shrink-0">
+          {logoUrl
+            ? <img src={logoUrl} alt="" className="w-full h-full object-contain p-1" />
+            : <span className="text-[13px] font-extrabold" style={{ color }}>{merchantName.slice(0, 2).toUpperCase()}</span>}
+        </div>
+        <div className="flex-1 min-w-0">
+          <p className="text-[15px] font-extrabold truncate">{merchantName}</p>
+          <p className="text-[11px] text-white/70 truncate">{forName ? `For ${forName}` : 'Gift card'}{fromName ? ` · from ${fromName}` : ''}</p>
+        </div>
+        <span className="text-[9px] font-extrabold tracking-[1px] text-[#0C2E29] bg-[#d4a843] px-2 py-1 rounded-full shrink-0">GIFT CARD</span>
+      </div>
+      <p className="text-[36px] font-extrabold tracking-tight leading-none">{amountCents ? money(amountCents) : '$0.00'}</p>
+      {note && <p className="text-[12.5px] italic leading-relaxed bg-white/10 rounded-xl px-3 py-2.5">“{note}”</p>}
+    </div>
+  )
+}
+
 // ── Issue ─────────────────────────────────────────────────────────────────
 export function GiftCardIssue({ merchantId, merchantName, admin = false }: { merchantId: string; merchantName: string; admin?: boolean }) {
+  // Brand colour and logo for the preview
+  const [brand, setBrand] = useState<{ color: string; logo: string | null }>({ color: '#00605A', logo: null })
+  useEffect(() => {
+    if (!merchantId) return
+    const supabase = createClient()
+    Promise.all([
+      supabase.from('merchants').select('logo_url').eq('id', merchantId).maybeSingle(),
+      supabase.from('loyalty_cards').select('card_color').eq('merchant_id', merchantId).eq('is_active', true).limit(1).maybeSingle(),
+    ]).then(([{ data: m }, { data: lc }]) => {
+      setBrand({ color: lc?.card_color || '#00605A', logo: m?.logo_url ?? null })
+    })
+  }, [merchantId])
   const staff = useStaff(merchantId, admin)
   const [amount, setAmount] = useState('50')
   const [custom, setCustom] = useState(false)
@@ -148,6 +184,7 @@ export function GiftCardIssue({ merchantId, merchantName, admin = false }: { mer
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState('')
   const [issued, setIssued] = useState<{ claimCode: string; amountCents: number; buyerFirst: string | null; forName: string; fromName: string } | null>(null)
+  const [issuedNote, setIssuedNote] = useState('')
   const [copied, setCopied] = useState(false)
 
   const cents = toCents(amount)
@@ -171,6 +208,7 @@ export function GiftCardIssue({ merchantId, merchantName, admin = false }: { mer
     })
     setBusy(false)
     if (err || !data?.ok) { setError(explainGiftError(data?.error)); return }
+    setIssuedNote(note)
     setIssued({ claimCode: data.claim_code, amountCents: cents!, buyerFirst: data.buyer_first_name ?? null, forName, fromName })
   }
 
@@ -194,8 +232,23 @@ export function GiftCardIssue({ merchantId, merchantName, admin = false }: { mer
 
   if (gate) return <StaffPinGate s={staff} onPass={() => { setGate(false); submit() }} onCancel={() => setGate(false)} />
 
+  const preview = (
+    <div className="flex flex-col gap-3">
+      <p className="text-[11px] font-semibold text-gray-400 uppercase tracking-wider">As they'll see it</p>
+      <CardPreview
+        merchantName={merchantName} logoUrl={brand.logo} color={brand.color}
+        amountCents={issued ? issued.amountCents : cents}
+        forName={issued ? issued.forName : forName}
+        fromName={issued ? issued.fromName : fromName}
+        note={issued ? issuedNote : note}
+      />
+      {!issued && <p className="text-[12px] text-gray-400 leading-relaxed">This is the card in the recipient's app once they enter the code. Every visit they pay with it still earns a stamp.</p>}
+    </div>
+  )
+
   if (issued) {
     return (
+      <div className="grid lg:grid-cols-[1fr_320px] gap-6 items-start">
       <div className="bg-white border border-green-200 rounded-2xl p-6">
         <div className="flex items-center gap-3 mb-4">
           <div className="h-11 w-11 rounded-full bg-green-100 flex items-center justify-center shrink-0"><CheckCircle2 size={20} className="text-green-600" /></div>
@@ -225,10 +278,13 @@ export function GiftCardIssue({ merchantId, merchantName, admin = false }: { mer
         </div>
         <button type="button" onClick={reset} className="mt-2 w-full py-3 rounded-xl bg-brand-500 text-[14px] font-semibold text-white hover:bg-brand-600">Issue another</button>
       </div>
+      {preview}
+      </div>
     )
   }
 
   return (
+    <div className="grid lg:grid-cols-[1fr_320px] gap-6 items-start">
     <form onSubmit={e => { e.preventDefault(); submit() }} className="bg-white border border-gray-200 rounded-2xl p-6 flex flex-col gap-5">
       <StaffPicker s={staff} label="Issuing as" />
 
@@ -307,6 +363,8 @@ export function GiftCardIssue({ merchantId, merchantName, admin = false }: { mer
         {busy ? 'Issuing…' : `Issue ${cents ? money(cents) : ''} gift card`}
       </button>
     </form>
+    {preview}
+    </div>
   )
 }
 
@@ -624,7 +682,7 @@ export function GiftCardsWorkspace({
   const [title, sub] = titles[section]
 
   return (
-    <div className={compact ? 'flex flex-col gap-5' : 'max-w-3xl flex flex-col gap-6'}>
+    <div className={compact ? 'flex flex-col gap-5' : 'max-w-5xl flex flex-col gap-6'}>
       <div className="flex items-start gap-3">
         <div className="w-10 h-10 rounded-xl bg-brand-50 text-brand-600 flex items-center justify-center shrink-0"><Gift size={20} strokeWidth={1.75} /></div>
         <div className="flex-1 min-w-0">
