@@ -40,6 +40,7 @@ export default function App() {
         <Route path="/terms" element={<Terms />} />
         <Route path="/admin" element={<Admin />} />
         <Route path="/gift/:code" element={<Gift />} />
+        <Route path="/g/:code" element={<Gift />} />
         <Route
           element={
             <ProtectedRoute>

@@ -30,7 +30,7 @@ export function giftShareMessage(opts: { businessName: string; amountCents: numb
   return (
     `${who} a ${money(opts.amountCents)} gift card for ${opts.businessName} on Stampd.\n\n` +
     `Your code: ${opts.claimCode}\n\n` +
-    `Open Stampd, go to Rewards, tap "Have a gift card code?" and type it in. ` +
-    `Don't have Stampd yet? Get it here: https://stampdbahamas.com/gift/${opts.claimCode.replace('-', '')}`
+    `Tap this link to add it: https://stampdbahamas.com/g/${opts.claimCode.replace('-', '')}\n\n` +
+    `Or open Stampd, go to Rewards, tap "Have a gift card code?" and type it in.`
   )
 }
