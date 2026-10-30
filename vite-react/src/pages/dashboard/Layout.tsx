@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react'
 import { Outlet, NavLink, useNavigate, useLocation } from 'react-router-dom'
 import {
   LayoutDashboard, Stamp, Users, BarChart3,
-  CreditCard, Bell, Settings, LogOut, Menu, ChevronRight, BookOpen, Clock, Lock, Megaphone,
+  CreditCard, Bell, Settings, LogOut, Menu, ChevronRight, BookOpen, Clock, Lock, Megaphone, Gift,
 } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
 import { MerchantStatusProvider } from '@/lib/merchantStatus'
@@ -13,12 +13,20 @@ const NAV_ITEMS = [
   { to: '/dashboard',     icon: LayoutDashboard, label: 'Dashboard' },
   { to: '/stamp',         icon: Stamp,           label: 'Issue Stamp', requiresApproval: true },
   { to: '/specials',      icon: Megaphone,       label: 'Specials', requiresApproval: true },
+  { to: '/gift-cards',    icon: Gift,            label: 'Gift cards', requiresApproval: true },
   { to: '/customers',     icon: Users,           label: 'Customers' },
   { to: '/analytics',     icon: BarChart3,       label: 'Analytics' },
   { to: '/card',          icon: CreditCard,      label: 'My Card' },
   { to: '/notifications', icon: Bell,            label: 'Notifications' },
   { to: '/settings',      icon: Settings,        label: 'Settings' },
 ] as const
+
+// Sub-pages under Gift cards, nested in the sidebar so staff switch in one click
+const GIFT_SUBNAV = [
+  { to: '/gift-cards/issue',   label: 'Issue' },
+  { to: '/gift-cards/redeem',  label: 'Redeem' },
+  { to: '/gift-cards/history', label: 'Outstanding & history' },
+]
 
 export default function DashboardLayout() {
   const [mobileOpen, setMobileOpen] = useState(false)
@@ -28,6 +36,8 @@ export default function DashboardLayout() {
   // Optimistic default so a completed merchant never sees a locked flash;
   // incomplete merchants are on /onboarding anyway while this resolves.
   const [setupComplete, setSetupComplete] = useState(true)
+  // Gift cards are switched on per shop; the nav item only shows when they are
+  const [giftCardsEnabled, setGiftCardsEnabled] = useState(false)
   const navigate = useNavigate()
   const location = useLocation()
 
@@ -98,11 +108,12 @@ export default function DashboardLayout() {
       if (!user) return
       const { data: merchant } = await supabase
         .from('merchants')
-        .select('is_active, business_name, category, address, merchant_type, loyalty_cards(reward_tiers(id))')
+        .select('is_active, business_name, category, address, merchant_type, gift_cards_enabled, loyalty_cards(reward_tiers(id))')
         .eq('owner_id', user.id)
         .maybeSingle()
       if (cancelled) return
       setIsActive(merchant?.is_active ?? false)
+      setGiftCardsEnabled(!!(merchant as { gift_cards_enabled?: boolean } | null)?.gift_cards_enabled)
       setStatusLoading(false)
       if (merchant) {
         // Same completion rule as ProtectedRoute: card with tiers + profile,
@@ -298,7 +309,7 @@ export default function DashboardLayout() {
           <div className="my-3 border-t border-gray-200" />
 
           <ul className="space-y-0.5">
-            {NAV_ITEMS.filter((i) => i.to !== '/stamp').map((item) => {
+            {NAV_ITEMS.filter((i) => i.to !== '/stamp' && (i.to !== '/gift-cards' || giftCardsEnabled)).map((item) => {
               const lockedBySetup = !setupComplete
               const lockedByApproval = setupComplete && 'requiresApproval' in item && item.requiresApproval && !isActive
               const locked = lockedBySetup || lockedByApproval
@@ -309,25 +320,49 @@ export default function DashboardLayout() {
               return (
               <li key={item.to}>
                 {!locked ? (
-                  <NavLink
-                    to={item.to}
-                    data-tour={item.to === '/customers' ? 'customers' : item.to === '/card' ? 'card' : item.to === '/settings' ? 'settings' : undefined}
-                    onClick={() => setMobileOpen(false)}
-                    className={({ isActive: active }) =>
-                      `flex items-center gap-2.5 rounded-md px-2.5 py-[7px] text-[13px] font-medium transition-colors ${
-                        active
-                          ? 'bg-brand-500 text-white'
-                          : 'text-gray-600 hover:text-gray-900 hover:bg-gray-100'
-                      }`
-                    }
-                  >
-                    {({ isActive: active }) => (
-                      <>
-                        <item.icon size={16} strokeWidth={active ? 2 : 1.75} />
-                        {item.label}
-                      </>
+                  <>
+                    <NavLink
+                      to={item.to === '/gift-cards' ? '/gift-cards/issue' : item.to}
+                      end={item.to === '/gift-cards'}
+                      data-tour={item.to === '/customers' ? 'customers' : item.to === '/card' ? 'card' : item.to === '/settings' ? 'settings' : undefined}
+                      onClick={() => setMobileOpen(false)}
+                      className={({ isActive: active }) =>
+                        `flex items-center gap-2.5 rounded-md px-2.5 py-[7px] text-[13px] font-medium transition-colors ${
+                          active
+                            ? 'bg-brand-500 text-white'
+                            : item.to === '/gift-cards' && location.pathname.startsWith('/gift-cards')
+                            ? 'text-brand-600'
+                            : 'text-gray-600 hover:text-gray-900 hover:bg-gray-100'
+                        }`
+                      }
+                    >
+                      {({ isActive: active }) => (
+                        <>
+                          <item.icon size={16} strokeWidth={active ? 2 : 1.75} />
+                          {item.label}
+                        </>
+                      )}
+                    </NavLink>
+                    {item.to === '/gift-cards' && (
+                      <ul className="mt-0.5 ml-[19px] pl-2.5 border-l border-gray-200 space-y-0.5">
+                        {GIFT_SUBNAV.map((sub) => (
+                          <li key={sub.to}>
+                            <NavLink
+                              to={sub.to}
+                              onClick={() => setMobileOpen(false)}
+                              className={({ isActive: active }) =>
+                                `block rounded-md px-2.5 py-[6px] text-[12.5px] font-medium transition-colors ${
+                                  active ? 'bg-brand-50 text-brand-600' : 'text-gray-500 hover:text-gray-900 hover:bg-gray-100'
+                                }`
+                              }
+                            >
+                              {sub.label}
+                            </NavLink>
+                          </li>
+                        ))}
+                      </ul>
                     )}
-                  </NavLink>
+                  </>
                 ) : (
                   <div
                     title={lockTitle}

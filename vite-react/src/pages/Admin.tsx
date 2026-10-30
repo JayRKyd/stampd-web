@@ -19,6 +19,9 @@ import {
 import { createClient } from '@/lib/supabase/client'
 import { AdminMerchantSetup } from '@/components/AdminMerchantSetup'
 import { SpecialsWorkspace } from '@/pages/dashboard/Specials'
+import { GiftCardsWorkspace, GiftSection } from '@/components/GiftCards'
+import { Gift as GiftIcon } from 'lucide-react'
+import { islandName } from '@/lib/islands'
 
 const PAGE_SIZE = 25
 
@@ -34,6 +37,7 @@ interface AdminMerchant {
   created_at: string
   has_active_card: boolean
   owner_email: string | null
+  island?: string | null
 }
 
 const TABS: { id: TabId; label: string }[] = [
@@ -63,6 +67,9 @@ export default function Admin() {
   const [setupFor, setSetupFor] = useState<{ id: string; name: string } | null>(null)
   // Post a special on a merchant's behalf (busy owners text it in)
   const [postFor, setPostFor] = useState<{ id: string; name: string } | null>(null)
+  // Issue or redeem a gift card on a merchant's behalf
+  const [giftFor, setGiftFor] = useState<{ id: string; name: string } | null>(null)
+  const [giftSection, setGiftSection] = useState<GiftSection>('issue')
 
   useEffect(() => {
     async function load() {
@@ -326,8 +333,11 @@ export default function Admin() {
                           </span>
                         </td>
                         <td className="px-4 py-3 hidden lg:table-cell">
-                          <span className="text-[13px] text-gray-600">
+                          <span className="text-[13px] text-gray-600 block">
                             {merchant.category ?? 'Uncategorized'}
+                          </span>
+                          <span className="text-[11px] text-gray-400 block">
+                            {islandName(merchant.island)}
                           </span>
                         </td>
                         <td className="px-4 py-3 hidden sm:table-cell">
@@ -361,6 +371,16 @@ export default function Admin() {
                               >
                                 <Megaphone size={14} />
                                 <span className="hidden lg:inline">Post</span>
+                              </button>
+                            )}
+                            {merchant.is_active && (
+                              <button
+                                onClick={() => { setGiftSection('issue'); setGiftFor({ id: merchant.id, name: merchant.business_name }) }}
+                                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-gray-200 text-gray-600 text-[12px] font-semibold hover:bg-gray-50 transition-colors"
+                                title="Issue or redeem a gift card for this merchant"
+                              >
+                                <GiftIcon size={14} />
+                                <span className="hidden lg:inline">Gift</span>
                               </button>
                             )}
                             <button
@@ -445,6 +465,25 @@ export default function Admin() {
             </div>
             <div className="p-5">
               <SpecialsWorkspace merchantId={postFor.id} merchantName={postFor.name} compact />
+            </div>
+          </div>
+        </div>
+      )}
+
+      {giftFor && (
+        <div className="fixed inset-0 z-40 bg-black/40 flex items-start justify-center overflow-y-auto p-4 sm:p-8" onClick={() => setGiftFor(null)}>
+          <div className="w-full max-w-3xl bg-gray-50 rounded-2xl shadow-xl" onClick={e => e.stopPropagation()}>
+            <div className="flex items-center justify-between gap-3 px-5 py-4 border-b border-gray-200 bg-white rounded-t-2xl">
+              <div className="min-w-0">
+                <h2 className="text-[16px] font-semibold text-gray-900 truncate">Gift cards for {giftFor.name}</h2>
+                <p className="text-[12px] text-gray-500">Only issue a card once the shop has the money in hand. Shows in their history as done by Stampd.</p>
+              </div>
+              <button onClick={() => setGiftFor(null)} aria-label="Close" className="w-8 h-8 rounded-lg hover:bg-gray-100 flex items-center justify-center text-gray-500 shrink-0">
+                <X size={16} />
+              </button>
+            </div>
+            <div className="p-5">
+              <GiftCardsWorkspace merchantId={giftFor.id} merchantName={giftFor.name} section={giftSection} onSection={setGiftSection} admin compact />
             </div>
           </div>
         </div>

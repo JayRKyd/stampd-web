@@ -20,6 +20,8 @@ import Notifications from '@/pages/dashboard/Notifications';
 import Settings from '@/pages/dashboard/Settings';
 import Onboarding from '@/pages/dashboard/Onboarding';
 import Specials from '@/pages/dashboard/Specials';
+import GiftCards from '@/pages/dashboard/GiftCards';
+import Gift from '@/pages/Gift';
 import Admin from '@/pages/Admin';
 
 export default function App() {
@@ -37,6 +39,7 @@ export default function App() {
         <Route path="/privacy" element={<Privacy />} />
         <Route path="/terms" element={<Terms />} />
         <Route path="/admin" element={<Admin />} />
+        <Route path="/gift/:code" element={<Gift />} />
         <Route
           element={
             <ProtectedRoute>
@@ -47,6 +50,8 @@ export default function App() {
           <Route path="/dashboard" element={<Dashboard />} />
           <Route path="/stamp" element={<Stamp />} />
           <Route path="/specials" element={<Specials />} />
+          <Route path="/gift-cards" element={<GiftCards />} />
+          <Route path="/gift-cards/:section" element={<GiftCards />} />
           <Route path="/customers" element={<Customers />} />
           <Route path="/card" element={<CardPage />} />
           <Route path="/analytics" element={<Analytics />} />
