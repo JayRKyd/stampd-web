@@ -22,6 +22,7 @@ const ERRORS: Record<string, string> = {
   expired: 'This gift card has expired.',
   insufficient: "That's more than what's left on the card.",
   not_voidable: 'This card can no longer be cancelled.',
+  too_many_tries: 'Too many wrong codes in the last hour. Wait a bit, then ask the customer to show the code again.',
 }
 
 export const explainGiftError = (code?: string | null) =>
