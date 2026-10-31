@@ -179,16 +179,30 @@ export function GiftCardIssue({ merchantId, merchantName, admin = false }: { mer
   const [note, setNote] = useState('')
   const [buyerPin, setBuyerPin] = useState('')
   const [expires, setExpires] = useState('12')
+  // The handoff: Stampd emails the gift, now or on a date
+  const [email, setEmail] = useState('')
+  const [sendMode, setSendMode] = useState<'now' | 'date'>('now')
+  const [sendDate, setSendDate] = useState('')
+  const [resending, setResending] = useState(false)
+  const [changeAddr, setChangeAddr] = useState(false)
+  const [newAddr, setNewAddr] = useState('')
+  const [resendMsg, setResendMsg] = useState('')
   const [confirmed, setConfirmed] = useState(false)
   const [gate, setGate] = useState(false)
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState('')
-  const [issued, setIssued] = useState<{ claimCode: string; amountCents: number; buyerFirst: string | null; forName: string; fromName: string } | null>(null)
+  const [issued, setIssued] = useState<{
+    cardId: string; claimCode: string; amountCents: number; buyerFirst: string | null; forName: string; fromName: string
+    emailTo: string | null; emailSendAt: string | null
+  } | null>(null)
   const [issuedNote, setIssuedNote] = useState('')
   const [copied, setCopied] = useState(false)
 
   const cents = toCents(amount)
-  const canIssue = !!cents && cents >= 500 && cents <= 50000 && confirmed && !staff.blocked && !busy
+  const emailClean = email.trim().toLowerCase()
+  const emailOk = emailClean === '' || /^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(emailClean)
+  const dateOk = sendMode === 'now' || !!sendDate
+  const canIssue = !!cents && cents >= 500 && cents <= 50000 && confirmed && emailOk && dateOk && !staff.blocked && !busy
 
   const submit = async () => {
     if (!canIssue) return
@@ -196,6 +210,8 @@ export function GiftCardIssue({ merchantId, merchantName, admin = false }: { mer
     setBusy(true)
     setError('')
     const supabase = createClient()
+    // A dated send goes out at 9am that morning, Nassau time
+    const sendAt = emailClean && sendMode === 'date' && sendDate ? new Date(`${sendDate}T09:00:00-04:00`).toISOString() : null
     const { data, error: err } = await supabase.rpc('issue_gift_card', {
       p_merchant_id: merchantId,
       p_amount_cents: cents,
@@ -205,15 +221,33 @@ export function GiftCardIssue({ merchantId, merchantName, admin = false }: { mer
       p_buyer_pin: buyerPin.replace(/\D/g, '') || null,
       p_staff_id: staff.selectedId,
       p_expires_months: Number(expires),
+      p_email: emailClean || null,
+      p_send_at: sendAt,
     })
     setBusy(false)
     if (err || !data?.ok) { setError(explainGiftError(data?.error)); return }
     setIssuedNote(note)
-    setIssued({ claimCode: data.claim_code, amountCents: cents!, buyerFirst: data.buyer_first_name ?? null, forName, fromName })
+    setIssued({
+      cardId: data.card?.id, claimCode: data.claim_code, amountCents: cents!, buyerFirst: data.buyer_first_name ?? null, forName, fromName,
+      emailTo: data.email_to ?? null, emailSendAt: data.email_send_at ?? null,
+    })
   }
 
   const reset = () => {
     setIssued(null); setAmount('50'); setCustom(false); setForName(''); setFromName(''); setNote(''); setBuyerPin(''); setConfirmed(false); setError('')
+    setEmail(''); setSendMode('now'); setSendDate(''); setChangeAddr(false); setNewAddr(''); setResendMsg('')
+  }
+
+  const resend = async (to?: string) => {
+    if (!issued || resending) return
+    setResending(true)
+    setResendMsg('')
+    const { data, error: err } = await createClient().rpc('resend_gift_card_email', { p_card_id: issued.cardId, p_email: to ?? null })
+    setResending(false)
+    if (err || !data?.ok) { setResendMsg(explainGiftError(data?.error)); return }
+    setIssued(i => i ? { ...i, emailTo: data.email_to, emailSendAt: new Date().toISOString() } : i)
+    setChangeAddr(false)
+    setResendMsg(`Sent again to ${data.email_to}.`)
   }
 
   const share = async () => {
@@ -250,33 +284,80 @@ export function GiftCardIssue({ merchantId, merchantName, admin = false }: { mer
     return (
       <div className="grid lg:grid-cols-[1fr_320px] gap-6 items-start">
       <div className="bg-white border border-green-200 rounded-2xl p-6">
-        <div className="flex items-center gap-3 mb-4">
-          <div className="h-11 w-11 rounded-full bg-green-100 flex items-center justify-center shrink-0"><CheckCircle2 size={20} className="text-green-600" /></div>
-          <div>
-            <h3 className="text-[16px] font-semibold text-gray-900">{money(issued.amountCents)} gift card issued{issued.forName ? ` for ${issued.forName}` : ''}</h3>
-            <p className="text-[12px] text-gray-500">
-              {issued.buyerFirst
-                ? `It's in ${issued.buyerFirst}'s app too, under Rewards, with a Share button.`
-                : 'Give the buyer this code. Write it on the receipt or share it to their phone.'}
-            </p>
-          </div>
-        </div>
+        {issued.emailTo ? (
+          <>
+            {(() => {
+              const scheduled = !!issued.emailSendAt && new Date(issued.emailSendAt).getTime() > Date.now() + 60_000
+              const when = issued.emailSendAt ? new Date(issued.emailSendAt).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' }) : ''
+              return (
+                <div className="flex items-center gap-3 mb-4">
+                  <div className="h-11 w-11 rounded-full bg-green-100 flex items-center justify-center shrink-0"><CheckCircle2 size={20} className="text-green-600" /></div>
+                  <div>
+                    <h3 className="text-[16px] font-semibold text-gray-900">
+                      {scheduled ? `Will send on ${when} to ${issued.emailTo}` : `Sent to ${issued.emailTo}`}
+                    </h3>
+                    <p className="text-[12px] text-gray-500">
+                      {scheduled
+                        ? 'Goes out at 9am that morning. The card exists now, so the code below works already.'
+                        : <>Ask them: <b>"Did you get it?"</b> It arrives in seconds. If it's not there, check spam, or fix the address and send again.</>}
+                    </p>
+                  </div>
+                </div>
+              )
+            })()}
 
-        <div className="rounded-xl border border-dashed border-brand-300 bg-brand-50/50 p-5 text-center mb-4">
-          <p className="text-[11px] font-semibold text-gray-400 uppercase tracking-wider mb-1">Gift card code</p>
-          <p className="text-[36px] font-bold tracking-[0.18em] text-brand-600 font-mono">{issued.claimCode}</p>
-          <p className="text-[12px] text-gray-500 mt-1">Whoever types this into Stampd gets the card. One use.</p>
-        </div>
+            <div className="flex items-center gap-3 rounded-xl border border-gray-200 bg-gray-50 px-4 py-3 mb-3">
+              <span className="text-[12px] text-gray-500">Code, if they'd rather type it</span>
+              <span className="ml-auto font-mono text-[15px] font-bold tracking-[0.15em] text-brand-600">{issued.claimCode}</span>
+              <button type="button" onClick={copyCode} className="text-gray-400 hover:text-gray-700" aria-label="Copy code">{copied ? <Check size={14} className="text-green-600" /> : <Copy size={14} />}</button>
+            </div>
 
-        <div className="flex gap-2">
-          <button type="button" onClick={copyCode} className="flex-1 py-3 rounded-xl border border-gray-200 text-[13px] font-semibold text-gray-700 hover:bg-gray-50 flex items-center justify-center gap-2">
-            {copied ? <><Check size={14} className="text-green-600" /> Copied</> : <><Copy size={14} /> Copy code</>}
-          </button>
-          <button type="button" onClick={share} className="flex-1 py-3 rounded-xl border border-gray-200 text-[13px] font-semibold text-gray-700 hover:bg-gray-50 flex items-center justify-center gap-2">
-            <Share2 size={14} /> Share to their phone
-          </button>
-        </div>
-        <button type="button" onClick={reset} className="mt-2 w-full py-3 rounded-xl bg-brand-500 text-[14px] font-semibold text-white hover:bg-brand-600">Issue another</button>
+            {changeAddr ? (
+              <form onSubmit={e => { e.preventDefault(); if (newAddr.trim()) resend(newAddr.trim()) }} className="flex gap-2 mb-3">
+                <input type="email" value={newAddr} onChange={e => setNewAddr(e.target.value)} placeholder="new@email.com" autoFocus className={inputClass} />
+                <button type="submit" disabled={resending || !newAddr.trim()} className="px-4 rounded-lg bg-brand-500 text-[13px] font-semibold text-white hover:bg-brand-600 disabled:opacity-50 whitespace-nowrap">{resending ? 'Sending…' : 'Send'}</button>
+                <button type="button" onClick={() => setChangeAddr(false)} className="px-3 rounded-lg border border-gray-200 text-[13px] text-gray-600">Cancel</button>
+              </form>
+            ) : (
+              <div className="flex gap-2 mb-2">
+                <button type="button" onClick={() => resend()} disabled={resending} className="flex-1 py-3 rounded-xl border border-gray-200 text-[13px] font-semibold text-gray-700 hover:bg-gray-50 disabled:opacity-50">{resending ? 'Sending…' : 'Send again'}</button>
+                <button type="button" onClick={() => { setNewAddr(issued.emailTo ?? ''); setChangeAddr(true) }} className="flex-1 py-3 rounded-xl border border-gray-200 text-[13px] font-semibold text-gray-700 hover:bg-gray-50">Change address</button>
+              </div>
+            )}
+            {resendMsg && <p className="text-[12px] text-gray-500 mb-2">{resendMsg}</p>}
+            <button type="button" onClick={reset} className="w-full py-3 rounded-xl bg-brand-500 text-[14px] font-semibold text-white hover:bg-brand-600">Issue another</button>
+          </>
+        ) : (
+          <>
+            <div className="flex items-center gap-3 mb-4">
+              <div className="h-11 w-11 rounded-full bg-green-100 flex items-center justify-center shrink-0"><CheckCircle2 size={20} className="text-green-600" /></div>
+              <div>
+                <h3 className="text-[16px] font-semibold text-gray-900">{money(issued.amountCents)} gift card issued{issued.forName ? ` for ${issued.forName}` : ''}</h3>
+                <p className="text-[12px] text-gray-500">
+                  {issued.buyerFirst
+                    ? `It's in ${issued.buyerFirst}'s app too, under Rewards, with a Share button.`
+                    : 'Give the buyer this code. Write it on the receipt or share it to their phone.'}
+                </p>
+              </div>
+            </div>
+
+            <div className="rounded-xl border border-dashed border-brand-300 bg-brand-50/50 p-5 text-center mb-4">
+              <p className="text-[11px] font-semibold text-gray-400 uppercase tracking-wider mb-1">Gift card code</p>
+              <p className="text-[36px] font-bold tracking-[0.18em] text-brand-600 font-mono">{issued.claimCode}</p>
+              <p className="text-[12px] text-gray-500 mt-1">Whoever types this into Stampd gets the card. One use.</p>
+            </div>
+
+            <div className="flex gap-2">
+              <button type="button" onClick={copyCode} className="flex-1 py-3 rounded-xl border border-gray-200 text-[13px] font-semibold text-gray-700 hover:bg-gray-50 flex items-center justify-center gap-2">
+                {copied ? <><Check size={14} className="text-green-600" /> Copied</> : <><Copy size={14} /> Copy code</>}
+              </button>
+              <button type="button" onClick={share} className="flex-1 py-3 rounded-xl border border-gray-200 text-[13px] font-semibold text-gray-700 hover:bg-gray-50 flex items-center justify-center gap-2">
+                <Share2 size={14} /> Share to their phone
+              </button>
+            </div>
+            <button type="button" onClick={reset} className="mt-2 w-full py-3 rounded-xl bg-brand-500 text-[14px] font-semibold text-white hover:bg-brand-600">Issue another</button>
+          </>
+        )}
       </div>
       {preview}
       </div>
@@ -329,6 +410,27 @@ export function GiftCardIssue({ merchantId, merchantName, admin = false }: { mer
         <textarea id="gc-note" rows={2} value={note} onChange={e => setNote(e.target.value.slice(0, 140))} placeholder="Happy birthday! Lunch on me this week." className={`${inputClass} resize-none`} />
       </div>
 
+      {/* The handoff: Stampd emails the gift as "<Shop> via Stampd" */}
+      <div className="rounded-xl border-[1.5px] border-brand-500 bg-brand-50/40 p-4 grid sm:grid-cols-2 gap-4">
+        <div>
+          <label htmlFor="gc-email" className="block text-[12px] font-bold text-brand-600 mb-1.5">Email the card to</label>
+          <input id="gc-email" type="email" value={email} onChange={e => setEmail(e.target.value)} placeholder="their@email.com" className={`${inputClass} bg-white`} />
+          <p className="text-[11px] text-gray-500 mt-1.5">The buyer's email, or the person it's for. Stampd sends it as a gift from {merchantName}.</p>
+          {!emailOk && <p className="text-[11px] text-red-600 mt-1">That doesn't look like an email address.</p>}
+        </div>
+        <div>
+          <label htmlFor="gc-send" className="block text-[12px] font-bold text-brand-600 mb-1.5">Send</label>
+          <select id="gc-send" value={sendMode} onChange={e => setSendMode(e.target.value as 'now' | 'date')} className={`${inputClass} bg-white`} disabled={!emailClean}>
+            <option value="now">Right now</option>
+            <option value="date">On a date (their birthday)</option>
+          </select>
+          {sendMode === 'date' && emailClean && (
+            <input type="date" value={sendDate} min={new Date().toISOString().slice(0, 10)} onChange={e => setSendDate(e.target.value)} className={`${inputClass} bg-white mt-2`} />
+          )}
+          <p className="text-[11px] text-gray-500 mt-1.5">{sendMode === 'date' ? 'Goes out at 9am that morning.' : 'Ask the buyer "did you get it?" before they leave.'}</p>
+        </div>
+      </div>
+
       <div className="grid sm:grid-cols-2 gap-4">
         <div>
           <label htmlFor="gc-pin" className="block text-[12px] font-medium text-gray-600 mb-1.5">Buyer's Stampd PIN <span className="text-gray-400 font-normal">(optional)</span></label>
@@ -360,7 +462,7 @@ export function GiftCardIssue({ merchantId, merchantName, admin = false }: { mer
       {staff.blocked && <p className="text-[12px] text-amber-600 bg-amber-50 rounded-lg px-3 py-2.5">Select who's issuing above first.</p>}
 
       <button type="submit" disabled={!canIssue} className="w-full py-3 rounded-xl bg-brand-500 text-[14px] font-semibold text-white hover:bg-brand-600 disabled:opacity-50 transition-colors">
-        {busy ? 'Issuing…' : `Issue ${cents ? money(cents) : ''} gift card`}
+        {busy ? (emailClean ? 'Issuing and sending…' : 'Issuing…') : `Issue${emailClean ? ' and send' : ''} ${cents ? money(cents) : ''} gift card`}
       </button>
     </form>
     {preview}
@@ -518,7 +620,11 @@ export function GiftCardRedeem({ merchantId, admin = false }: { merchantId: stri
 
 // ── Outstanding & history ─────────────────────────────────────────────────
 interface Summary { outstanding_cents: number; outstanding_count: number; issued_month_cents: number; issued_month_count: number; used_month_cents: number; used_month_count: number }
-interface OpenCard { id: string; for_name: string | null; from_name: string | null; amount_cents: number; balance_cents: number; status: string; claim_code: string | null; holder_name: string | null; created_at: string; expires_at: string | null }
+interface OpenCard {
+  id: string; for_name: string | null; from_name: string | null; amount_cents: number; balance_cents: number; status: string
+  claim_code: string | null; holder_name: string | null; created_at: string; expires_at: string | null
+  email_to?: string | null; email_send_at?: string | null; email_sent_at?: string | null; email_last_error?: string | null
+}
 interface Ev { id: string; type: 'issue' | 'claim' | 'redeem' | 'void'; amount_cents: number | null; balance_after_cents: number | null; created_at: string; staff_name: string | null; card_id: string; for_name: string | null; from_name: string | null; holder_name: string | null }
 
 export function GiftCardHistory({ merchantId }: { merchantId: string }) {
@@ -601,6 +707,14 @@ export function GiftCardHistory({ merchantId }: { merchantId: string }) {
                       <span className="font-semibold text-gray-900">{c.holder_name ?? (c.for_name ? `For ${c.for_name}` : 'Gift card')}</span>
                       {c.from_name && <span className="text-gray-400"> · from {c.from_name}</span>}
                       {c.claim_code && <span className="block font-mono text-[11px] text-gray-400 mt-0.5">{c.claim_code}</span>}
+                      {c.email_to && (
+                        <span className={`block text-[11px] mt-0.5 ${c.email_last_error ? 'text-red-600' : 'text-gray-400'}`}>
+                          {c.email_last_error ? `Email to ${c.email_to} failed`
+                            : c.email_sent_at ? `Emailed to ${c.email_to}`
+                            : c.email_send_at ? `Emails ${new Date(c.email_send_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })} to ${c.email_to}`
+                            : `To email: ${c.email_to}`}
+                        </span>
+                      )}
                     </td>
                     <td className="px-5 py-3">
                       {c.status === 'unclaimed'

@@ -16,6 +16,8 @@ const ERRORS: Record<string, string> = {
   invalid_staff: 'That staff member is no longer active.',
   buyer_pin_not_found: 'No customer has that PIN. Leave it blank if the buyer is not on Stampd.',
   bad_code: "Type the six digits on the customer's screen.",
+  bad_email: "That doesn't look like an email address.",
+  already_claimed: 'This card has already been added to someone\'s Stampd, so there\'s nothing to resend.',
   code_not_found: 'No gift card at this shop matches that code. Ask them to tap Show code again and read it fresh.',
   expired: 'This gift card has expired.',
   insufficient: "That's more than what's left on the card.",
