@@ -24,8 +24,7 @@ function buildHtml(p: {
   amount_cents: number; claim_code: string; expires_at: string | null; link: string
 }) {
   const shop = esc(p.business_name)
-  const who = p.for_name ? `For ${esc(p.for_name)}` : 'Gift card'
-  const from = p.from_name ? ` · from ${esc(p.from_name)}` : ''
+  const who = [p.for_name ? `FOR ${esc(p.for_name).toUpperCase()}` : '', p.from_name ? `FROM ${esc(p.from_name).toUpperCase()}` : ''].filter(Boolean).join(' &middot; ')
   const greet = p.for_name ? `Hi ${esc(p.for_name)}.` : 'Hi.'
   const sender = p.from_name ? `${esc(p.from_name)} bought you` : "You've got"
   const expires = p.expires_at
@@ -46,17 +45,28 @@ function buildHtml(p: {
 </td></tr>
 <tr><td style="padding:16px 20px 0">
   <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:${esc(p.card_color)};border-radius:18px;color:#F7F2E8">
-    <tr><td style="padding:16px">
-      <table role="presentation" width="100%" cellpadding="0" cellspacing="0"><tr>
-        <td width="36" valign="middle">${logo}</td>
-        <td valign="middle" style="padding-left:10px">
-          <div style="font-size:15px;font-weight:800;color:#F7F2E8">${shop}</div>
-          <div style="font-size:11px;color:rgba(247,242,232,0.75)">${who}${from}</div>
-        </td>
-        <td align="right" valign="middle"><span style="display:inline-block;font-size:9px;font-weight:800;letter-spacing:1px;color:#0C2E29;background:#d4a843;padding:4px 8px;border-radius:999px">GIFT CARD</span></td>
+    <tr>
+      <td style="padding:16px 0 0 16px">
+        <table role="presentation" cellpadding="0" cellspacing="0"><tr>
+          <td width="36" valign="middle">${logo}</td>
+          <td valign="middle" style="padding-left:10px">
+            <div style="font-size:15px;font-weight:800;color:#F7F2E8">${shop}</div>
+            <div style="font-size:11px;color:rgba(247,242,232,0.7)">Gift card</div>
+          </td>
+        </tr></table>
+      </td>
+      <td align="right" valign="top" style="padding:0">
+        <div style="display:inline-block;background:#d4a843;color:#0C2E29;font-size:10px;font-weight:800;letter-spacing:3px;padding:8px 14px 8px 18px;border-radius:0 18px 0 12px">GIFT</div>
+      </td>
+    </tr>
+    <tr><td colspan="2" style="padding:12px 16px 16px">
+      <div style="font-size:36px;font-weight:800;letter-spacing:-1.5px;line-height:1;color:#F7F2E8">${money(p.amount_cents)}</div>
+      ${who ? `<div style="font-size:10px;font-weight:700;letter-spacing:1px;color:rgba(247,242,232,0.8);margin-top:8px">${who}</div>` : ''}
+      ${p.note ? `<table role="presentation" cellpadding="0" cellspacing="0" style="margin-top:12px"><tr><td style="width:3px;background:#d4a843;border-radius:2px"></td><td style="padding-left:10px;font-size:13px;line-height:1.4;font-style:italic;color:rgba(247,242,232,0.92)">&ldquo;${esc(p.note)}&rdquo;</td></tr></table>` : ''}
+      <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin-top:16px"><tr>
+        <td style="font-size:9.5px;font-weight:700;letter-spacing:1px;color:rgba(247,242,232,0.5)">GIFT CARD &middot; ${shop.toUpperCase()} ONLY</td>
+        <td align="right" style="font-size:9.5px;font-weight:700;letter-spacing:1px;color:rgba(247,242,232,0.5)">STAMPD</td>
       </tr></table>
-      <div style="font-size:34px;font-weight:800;letter-spacing:-1px;line-height:1;margin-top:14px;color:#F7F2E8">${money(p.amount_cents)}</div>
-      ${p.note ? `<div style="margin-top:12px;background:rgba(247,242,232,0.12);border-radius:12px;padding:10px 12px;font-size:13px;line-height:1.4;font-style:italic;color:#F7F2E8">&ldquo;${esc(p.note)}&rdquo;</div>` : ''}
     </td></tr>
   </table>
 </td></tr>

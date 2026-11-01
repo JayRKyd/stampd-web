@@ -3,6 +3,7 @@ import { useParams } from 'react-router-dom'
 import { Gift as GiftIcon, Smartphone } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
 import { APP_STORE_URL, PLAY_STORE_URL } from '@/lib/support'
+import { GiftCardFace } from '@/components/GiftCardFace'
 
 // The link in the gift card email or message. Shows the gift before anyone is
 // asked to sign up, then points at the app.
@@ -51,22 +52,11 @@ export default function Gift() {
         <h1 className="text-[30px] font-extrabold tracking-[-0.03em] leading-[1.1] mb-5">{title}</h1>
 
         {p && (
-          <div className="rounded-3xl p-5 text-white mb-5 shadow-[0_14px_30px_rgba(6,37,31,0.25)]" style={{ backgroundColor: p.card_color }}>
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-xl bg-[#F7F2E8] flex items-center justify-center overflow-hidden shrink-0">
-                {p.logo_url
-                  ? <img src={p.logo_url} alt="" className="w-full h-full object-contain p-1" />
-                  : <span className="text-[13px] font-extrabold" style={{ color: p.card_color }}>{p.business_name.slice(0, 2).toUpperCase()}</span>}
-              </div>
-              <div className="flex-1 min-w-0">
-                <p className="text-[15px] font-extrabold truncate">{p.business_name}</p>
-                <p className="text-[11px] text-white/75 truncate">{p.for_name ? `For ${p.for_name}` : 'Gift card'}{p.from_name ? ` · from ${p.from_name}` : ''}</p>
-              </div>
-              <span className="text-[9px] font-extrabold tracking-[1px] text-[#0C2E29] bg-[#d4a843] px-2 py-1 rounded-full shrink-0">GIFT CARD</span>
-            </div>
-            <p className="text-[36px] font-extrabold tracking-tight leading-none mt-4">{money(p.amount_cents)}</p>
-            {p.note && <p className="text-[13px] italic leading-relaxed bg-white/10 rounded-xl px-3 py-2.5 mt-3">“{p.note}”</p>}
-          </div>
+          <GiftCardFace
+            className="mb-5"
+            businessName={p.business_name} logoUrl={p.logo_url} color={p.card_color}
+            amountCents={p.amount_cents} forName={p.for_name} fromName={p.from_name} note={p.note}
+          />
         )}
 
         {!claimed && (

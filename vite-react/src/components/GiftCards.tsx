@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom'
 import { AlertCircle, Check, CheckCircle2, Copy, Gift, Lock, Share2, Trash2 } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
 import { money, toCents, explainGiftError, giftShareMessage } from '@/lib/giftCards'
+import { GiftCardFace } from '@/components/GiftCardFace'
 
 // Gift cards for the merchant portal and the admin panel. Three jobs:
 // issue one at the counter, take money off one, and see what's outstanding.
@@ -138,22 +139,10 @@ function CardPreview({ merchantName, logoUrl, color, amountCents, forName, fromN
   merchantName: string; logoUrl: string | null; color: string; amountCents: number | null; forName: string; fromName: string; note: string
 }) {
   return (
-    <div className="rounded-2xl p-5 text-white flex flex-col gap-4 shadow-lg" style={{ backgroundColor: color }}>
-      <div className="flex items-center gap-3">
-        <div className="w-10 h-10 rounded-xl bg-[#F7F2E8] flex items-center justify-center overflow-hidden shrink-0">
-          {logoUrl
-            ? <img src={logoUrl} alt="" className="w-full h-full object-contain p-1" />
-            : <span className="text-[13px] font-extrabold" style={{ color }}>{merchantName.slice(0, 2).toUpperCase()}</span>}
-        </div>
-        <div className="flex-1 min-w-0">
-          <p className="text-[15px] font-extrabold truncate">{merchantName}</p>
-          <p className="text-[11px] text-white/70 truncate">{forName ? `For ${forName}` : 'Gift card'}{fromName ? ` · from ${fromName}` : ''}</p>
-        </div>
-        <span className="text-[9px] font-extrabold tracking-[1px] text-[#0C2E29] bg-[#d4a843] px-2 py-1 rounded-full shrink-0">GIFT CARD</span>
-      </div>
-      <p className="text-[36px] font-extrabold tracking-tight leading-none">{amountCents ? money(amountCents) : '$0.00'}</p>
-      {note && <p className="text-[12.5px] italic leading-relaxed bg-white/10 rounded-xl px-3 py-2.5">“{note}”</p>}
-    </div>
+    <GiftCardFace
+      businessName={merchantName} logoUrl={logoUrl} color={color}
+      amountCents={amountCents ?? 0} forName={forName || null} fromName={fromName || null} note={note || null}
+    />
   )
 }
 
