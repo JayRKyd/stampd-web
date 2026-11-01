@@ -1,8 +1,10 @@
 import { createClient } from 'jsr:@supabase/supabase-js@2'
+import { renderCardPng } from './card.ts'
 
 // Sends the gift card email. Called by the database (dispatch_gift_email)
-// with the card already laid out; this only builds the HTML and hands it
-// to Resend. From: "<Shop> via Stampd <gifts@stampdbahamas.com>".
+// with the card already laid out. The card itself is rendered to a PNG so
+// every mail client shows the real ribbon design; the HTML table card is
+// the fallback if rendering fails. From: "<Shop> via Stampd".
 
 const CORS = {
   'Access-Control-Allow-Origin': '*',
@@ -22,6 +24,7 @@ function buildHtml(p: {
   business_name: string; logo_url: string | null; card_color: string; address: string | null
   for_name: string | null; from_name: string | null; note: string | null
   amount_cents: number; claim_code: string; expires_at: string | null; link: string
+  card_image_url?: string | null
 }) {
   const shop = esc(p.business_name)
   const who = [p.for_name ? `FOR ${esc(p.for_name).toUpperCase()}` : '', p.from_name ? `FROM ${esc(p.from_name).toUpperCase()}` : ''].filter(Boolean).join(' &middot; ')
@@ -44,7 +47,9 @@ function buildHtml(p: {
   <div style="font-size:11px;font-weight:700;letter-spacing:1px;color:#00605A">A GIFT FOR YOU</div>
 </td></tr>
 <tr><td style="padding:16px 20px 0">
-  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:${esc(p.card_color)};border-radius:18px;color:#F7F2E8">
+  ${p.card_image_url
+    ? `<img src="${esc(p.card_image_url)}" width="380" alt="${money(p.amount_cents)} gift card for ${shop}" style="display:block;width:100%;max-width:380px;height:auto;border-radius:18px">`
+    : `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:${esc(p.card_color)};border-radius:18px;color:#F7F2E8">
     <tr>
       <td style="padding:16px 0 0 16px">
         <table role="presentation" cellpadding="0" cellspacing="0"><tr>
@@ -68,7 +73,7 @@ function buildHtml(p: {
         <td align="right" style="font-size:9.5px;font-weight:700;letter-spacing:1px;color:rgba(247,242,232,0.5)">STAMPD</td>
       </tr></table>
     </td></tr>
-  </table>
+  </table>`}
 </td></tr>
 <tr><td style="padding:16px 20px 0;font-size:14px;line-height:1.5;color:#1A2B2A">
   ${greet} ${sender} a gift card at ${shop}. Add it to the Stampd app and show your code at the counter whenever you visit. Spend a bit at a time, the balance keeps.
@@ -110,7 +115,22 @@ Deno.serve(async (req: Request) => {
     if (!p.to || !p.claim_code) throw new Error('missing_fields')
 
     const link = `https://stampdbahamas.com/g/${String(p.claim_code).replace('-', '')}`
-    const html = buildHtml({ ...p, link })
+
+    // Render the card to a PNG and park it in storage; fall back to the HTML card if anything fails
+    let cardImageUrl: string | null = null
+    try {
+      const png = await renderCardPng(p)
+      const path = `gift-cards/${cardId ?? crypto.randomUUID()}.png`
+      const { error: upErr } = await supabase.storage.from('merchant-assets').upload(path, png, { contentType: 'image/png', upsert: true })
+      if (!upErr) {
+        const { data: pub } = supabase.storage.from('merchant-assets').getPublicUrl(path)
+        cardImageUrl = `${pub.publicUrl}?v=${Date.now()}`
+      } else console.log('card image upload failed', upErr.message)
+    } catch (e) {
+      console.log('card render failed', String(e))
+    }
+
+    const html = buildHtml({ ...p, link, card_image_url: cardImageUrl })
     const subject = p.from_name
       ? `${p.from_name} sent you a ${money(p.amount_cents)} gift card for ${p.business_name}`
       : `Your ${money(p.amount_cents)} gift card for ${p.business_name}`
@@ -134,7 +154,7 @@ Deno.serve(async (req: Request) => {
       const body = await res.text()
       throw new Error(`resend_${res.status}: ${body.slice(0, 200)}`)
     }
-    return json({ ok: true, delivered: true })
+    return json({ ok: true, delivered: true, card_image: !!cardImageUrl })
   } catch (e) {
     const msg = String(e instanceof Error ? e.message : e)
     if (cardId) {
