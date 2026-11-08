@@ -114,7 +114,9 @@ Deno.serve(async (req: Request) => {
     if (!resendKey) throw new Error('email_not_configured')
     if (!p.to || !p.claim_code) throw new Error('missing_fields')
 
-    const link = `https://stampdbahamas.com/g/${String(p.claim_code).replace('-', '')}`
+    // www on purpose: the bare domain only redirects there, and iOS/Android
+    // hand a link to the app only when its exact host serves the .well-known files.
+    const link = `https://www.stampdbahamas.com/g/${String(p.claim_code).replace('-', '')}`
 
     // Render the card to a PNG and park it in storage; fall back to the HTML card if anything fails
     let cardImageUrl: string | null = null
