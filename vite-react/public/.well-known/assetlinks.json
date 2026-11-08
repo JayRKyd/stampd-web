@@ -4,7 +4,7 @@
     "target": {
       "namespace": "android_app",
       "package_name": "com.stampdbahamas.app",
-      "sha256_cert_fingerprints": ["PLAY_APP_SIGNING_SHA256_FINGERPRINT"]
+      "sha256_cert_fingerprints": ["14:2C:11:43:50:3F:E4:8D:43:FF:C0:4F:43:63:84:AE:2D:BA:4D:AA:10:C2:B8:4B:67:C0:B0:44:82:70:2A:0B"]
     }
   }
 ]
