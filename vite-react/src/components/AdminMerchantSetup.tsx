@@ -2,6 +2,7 @@ import { useState, useEffect, useRef, useCallback } from 'react'
 import { X, Upload, Image as ImageIcon, Plus, Trash2, Store, Check } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
 import { resizeImage } from '@/lib/resizeImage'
+import { ISLANDS } from '@/lib/islands'
 
 interface Tier { stamps: string; reward: string }
 
@@ -38,6 +39,10 @@ export function AdminMerchantSetup({ merchantId, merchantName, onClose, onSaved 
   const [savedLoc, setSavedLoc] = useState(false)
   const [photos, setPhotos] = useState<{ id: string; url: string }[]>([])
   const [uploadingPhoto, setUploadingPhoto] = useState(false)
+  // Which island's customers see this shop
+  const [island, setIsland] = useState('grand-bahama')
+  const [savingIsland, setSavingIsland] = useState(false)
+  const [savedIsland, setSavedIsland] = useState(false)
 
   const logoInput = useRef<HTMLInputElement>(null)
   const coverInput = useRef<HTMLInputElement>(null)
@@ -52,6 +57,7 @@ export function AdminMerchantSetup({ merchantId, merchantName, onClose, onSaved 
         setCoverUrl(data.merchant?.cover_image_url ?? null)
         setLat(data.merchant?.latitude != null ? String(data.merchant.latitude) : '')
         setLng(data.merchant?.longitude != null ? String(data.merchant.longitude) : '')
+        setIsland(data.merchant?.island ?? 'grand-bahama')
         setVisitLabel(data.merchant?.merchant_type === 'individual' ? '' : '')
         if (data.card) {
           setVisitLabel(data.card.visit_label ?? '')
@@ -145,6 +151,20 @@ export function AdminMerchantSetup({ merchantId, merchantName, onClose, onSaved 
     setSavedOk(true)
     onSaved()
     setTimeout(() => setSavedOk(false), 2500)
+  }
+
+  const saveIsland = async (next: string) => {
+    setIsland(next)
+    setSavingIsland(true)
+    setError('')
+    const supabase = createClient()
+    const { data, error: rpcErr } = await supabase.rpc('admin_set_merchant_island', {
+      p_merchant_id: merchantId, p_island: next,
+    })
+    setSavingIsland(false)
+    if (rpcErr || !data?.ok) { setError('Could not save the island.'); return }
+    setSavedIsland(true)
+    setTimeout(() => setSavedIsland(false), 2500)
   }
 
   const saveLocation = async () => {
@@ -325,6 +345,29 @@ export function AdminMerchantSetup({ merchantId, merchantName, onClose, onSaved 
                   onChange={e => setVisitLabel(e.target.value)}
                   className="w-full px-3 py-2 rounded-lg border border-gray-200 text-[13px] focus:outline-none focus:border-brand-500"
                 />
+              </div>
+            </div>
+
+            {/* Island — which customers see this shop in Discover and on the Today board */}
+            <div className="pt-2 border-t border-gray-100">
+              <p className="text-[13px] font-semibold text-gray-800 mb-1">Island</p>
+              <p className="text-[12px] text-gray-500 mb-3">
+                Customers browsing this island see the shop. Saves as soon as you pick one.
+              </p>
+              <div className="flex items-center gap-2">
+                <select
+                  value={island}
+                  onChange={e => saveIsland(e.target.value)}
+                  disabled={savingIsland}
+                  className="flex-1 px-3 py-2 rounded-lg border border-gray-200 text-[13px] bg-white focus:outline-none focus:border-brand-500 disabled:opacity-60"
+                >
+                  {ISLANDS.map(i => (
+                    <option key={i.id} value={i.id}>{i.name}</option>
+                  ))}
+                </select>
+                {savedIsland && (
+                  <span className="inline-flex items-center gap-1 text-[12px] font-semibold text-green-700"><Check size={14} /> Saved</span>
+                )}
               </div>
             </div>
 

@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import { Trash2, Lock, KeyRound, Upload, X, Monitor, Smartphone, Share, Plug, AlertTriangle } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
 import { BUSINESS_CATEGORIES, normalizeCategory } from '@/lib/categories'
+import { ISLANDS } from '@/lib/islands'
 import { resizeImage } from '@/lib/resizeImage'
 import { enterKioskMode } from '@/lib/kioskMode'
 
@@ -20,6 +21,7 @@ export default function Settings() {
   const [form, setForm] = useState({
     businessName: '',
     category: '',
+    island: 'grand-bahama',
     address: '',
     phone: '',
     website: '',
@@ -125,7 +127,7 @@ export default function Settings() {
 
       const { data: merchant } = await supabase
         .from('merchants')
-        .select('id, business_name, category, address, phone, website, description, cover_image_url, require_staff_pin, stamp_cooldown_minutes')
+        .select('id, business_name, category, island, address, phone, website, description, cover_image_url, require_staff_pin, stamp_cooldown_minutes')
         .eq('owner_id', user.id)
         .maybeSingle()
 
@@ -134,6 +136,7 @@ export default function Settings() {
         setForm({
           businessName: merchant.business_name ?? '',
           category: normalizeCategory(merchant.category),
+          island: merchant.island ?? 'grand-bahama',
           address: merchant.address ?? '',
           phone: merchant.phone ?? '',
           website: merchant.website ?? '',
@@ -215,6 +218,7 @@ export default function Settings() {
     await supabase.from('merchants').update({
       business_name: form.businessName,
       category: form.category || null,
+      island: form.island,
       address: form.address || null,
       phone: form.phone || null,
       website: form.website || null,
@@ -329,6 +333,20 @@ export default function Settings() {
                     <option key={c} value={c}>{c}</option>
                   ))}
                 </select>
+              </div>
+
+              <div>
+                <label className="block text-[12px] font-medium text-gray-600 mb-1.5">Island</label>
+                <select
+                  value={form.island}
+                  onChange={(e) => setForm({ ...form, island: e.target.value })}
+                  className={inputClass}
+                >
+                  {ISLANDS.map(i => (
+                    <option key={i.id} value={i.id}>{i.name}</option>
+                  ))}
+                </select>
+                <p className="text-[11px] text-gray-400 mt-1.5">Customers browsing this island see your shop.</p>
               </div>
 
               <div>
