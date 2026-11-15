@@ -22,6 +22,7 @@ import Onboarding from '@/pages/dashboard/Onboarding';
 import Specials from '@/pages/dashboard/Specials';
 import GiftCards from '@/pages/dashboard/GiftCards';
 import Gift from '@/pages/Gift';
+import Join from '@/pages/Join';
 import Admin from '@/pages/Admin';
 
 export default function App() {
@@ -41,6 +42,7 @@ export default function App() {
         <Route path="/admin" element={<Admin />} />
         <Route path="/gift/:code" element={<Gift />} />
         <Route path="/g/:code" element={<Gift />} />
+        <Route path="/join/:code" element={<Join />} />
         <Route
           element={
             <ProtectedRoute>
