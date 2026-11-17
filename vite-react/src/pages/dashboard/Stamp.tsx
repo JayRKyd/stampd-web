@@ -529,6 +529,45 @@ export default function Stamp() {
     setState('idle')
   }
 
+  // Public demo: when the tour reaches this screen it plays one stamp by
+  // itself (pick a name, type a sample PIN a digit at a time, add the stamp)
+  // so a visitor sees how the counter works without knowing what to enter.
+  const demoRef = useRef({ ready: false, state: 'idle' as State, play: (() => {}) as (pin: string) => void, add: () => {} })
+  demoRef.current = {
+    ready: !!merchantId && staffLoaded,
+    state,
+    play: (partial) => {
+      if (!selectedStaffId && staffList[0]) selectStaff(staffList[0].id)
+      handlePinChange(partial)
+    },
+    add: () => issueStamp(true),
+  }
+  useEffect(() => {
+    if (!isDemo()) return
+    let run = 0
+    const pause = (ms: number) => new Promise(r => setTimeout(r, ms))
+    const onPlay = async (e: Event) => {
+      const mine = ++run
+      const pin = String((e as CustomEvent).detail)
+      const until = async (test: () => boolean, ms: number) => {
+        for (let t = 0; t < ms && mine === run && !test(); t += 100) await pause(100)
+        return mine === run && test()
+      }
+      if (!(await until(() => demoRef.current.ready, 5000))) return
+      await pause(700)
+      for (let i = 0; i <= pin.length; i++) {
+        if (mine !== run) return
+        demoRef.current.play(pin.slice(0, i))
+        await pause(i === 0 ? 500 : 260)
+      }
+      if (!(await until(() => demoRef.current.state === 'found', 4000))) return
+      await pause(1800)
+      if (mine === run && demoRef.current.state === 'found') demoRef.current.add()
+    }
+    window.addEventListener('stampd:demo-play', onPlay)
+    return () => { run = -1; window.removeEventListener('stampd:demo-play', onPlay) }
+  }, [])
+
   const generateGuestPin = async () => {
     if (!merchantId || !isActive) return
     setGuestPinLoading(true)

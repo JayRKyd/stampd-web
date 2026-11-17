@@ -16,7 +16,8 @@ const STEPS = [
   {
     to: '/stamp',
     title: 'Stamping takes seconds',
-    body: 'Try it: tap a name under “Stamping as”, type any six digits as the customer’s PIN, then tap Add Stamp. That is the whole job at the counter.',
+    body: 'Watch: pick who is stamping, type the customer’s 6-digit PIN, add the stamp. That is the whole job at the counter. Try it yourself after with any six digits.',
+    samplePin: '123456',
   },
   {
     to: '/customers',
@@ -65,10 +66,22 @@ export function DemoTour({ onClose }: { onClose: () => void }) {
   const [step, setStep] = useState(0)
   const navigate = useNavigate()
   const done = step >= STEPS.length
+  const samplePin = !done && 'samplePin' in STEPS[step] ? (STEPS[step] as { samplePin: string }).samplePin : null
 
   useEffect(() => {
     if (step < STEPS.length) navigate(STEPS[step].to)
   }, [step, navigate])
+
+  // On a step with a sample PIN, the screen plays itself once it has loaded
+  const [plays, setPlays] = useState(0)
+  useEffect(() => {
+    if (!samplePin) return
+    const t = setTimeout(() => {
+      document.querySelector('main')?.scrollTo({ top: 0, behavior: 'smooth' })
+      window.dispatchEvent(new CustomEvent('stampd:demo-play', { detail: samplePin }))
+    }, 600)
+    return () => clearTimeout(t)
+  }, [samplePin, step, plays])
 
   return (
     <div
@@ -112,6 +125,14 @@ export function DemoTour({ onClose }: { onClose: () => void }) {
               Skip tour
             </button>
             <div className="flex items-center gap-2">
+              {samplePin && (
+                <button
+                  onClick={() => setPlays(n => n + 1)}
+                  className="px-3 py-2 text-[13px] font-medium text-brand-600 hover:text-brand-700 transition-colors"
+                >
+                  Replay
+                </button>
+              )}
               {step > 0 && (
                 <button
                   onClick={() => setStep(s => s - 1)}
