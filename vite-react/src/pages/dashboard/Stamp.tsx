@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom'
 import { CheckCircle2, AlertCircle, Clock, Lock, Users, X, KeyRound, Copy, Check, Gift, Stamp as StampIcon, WifiOff } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
 import { useMerchantStatus } from '@/lib/merchantStatus'
+import { isDemo } from '@/lib/demo/mode'
 
 type State = 'idle' | 'looking' | 'found' | 'not_found' | 'staff_pin' | 'cooldown' | 'issuing' | 'success' | 'error' | 'offline_ready' | 'redeeming' | 'redeem_success'
 
@@ -21,10 +22,12 @@ interface QueuedStamp {
   staffPin?: string
 }
 
-const QUEUE_KEY = 'stampd_offline_queue'
+// The public demo keeps its own queue so a made-up stamp can never be
+// delivered to a real shop that later signs in on the same device.
+const queueKey = () => (isDemo() ? 'stampd_demo_offline_queue' : 'stampd_offline_queue')
 
 function readQueue(): QueuedStamp[] {
-  try { return JSON.parse(localStorage.getItem(QUEUE_KEY) ?? '[]') } catch { return [] }
+  try { return JSON.parse(localStorage.getItem(queueKey()) ?? '[]') } catch { return [] }
 }
 
 interface Customer {
@@ -149,7 +152,7 @@ export default function Stamp() {
   }, [])
 
   const writeQueue = (q: QueuedStamp[]) => {
-    localStorage.setItem(QUEUE_KEY, JSON.stringify(q))
+    localStorage.setItem(queueKey(), JSON.stringify(q))
     setQueuedCount(q.length)
   }
 

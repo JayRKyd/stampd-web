@@ -1,4 +1,6 @@
-import { BrowserRouter, Routes, Route } from 'react-router-dom';
+import { useEffect } from 'react';
+import { BrowserRouter, Routes, Route, Navigate, useLocation } from 'react-router-dom';
+import { enterDemo, exitDemo, isDemo, isDemoPath } from '@/lib/demo/mode';
 import ProtectedRoute from '@/components/ProtectedRoute';
 import Landing from '@/pages/Landing';
 import Merchants from '@/pages/Merchants';
@@ -25,11 +27,36 @@ import Gift from '@/pages/Gift';
 import Join from '@/pages/Join';
 import Admin from '@/pages/Admin';
 
+// /demo switches the demo shop on and drops the visitor on the dashboard
+// /demo?page=stamp opens one screen directly, without the walk-through
+const DEMO_PAGES: Record<string, string> = {
+  stamp: '/stamp', customers: '/customers', card: '/card', 'gift-cards': '/gift-cards/issue',
+  specials: '/specials', analytics: '/analytics', notifications: '/notifications',
+};
+
+function DemoEntry() {
+  const page = DEMO_PAGES[new URLSearchParams(useLocation().search).get('page') ?? ''];
+  enterDemo(!page);
+  return <Navigate to={page ?? '/dashboard'} replace />;
+}
+
+// Leaving the dashboard pages ends the demo, so sign-in and sign-up are real
+function DemoGuard() {
+  const { pathname } = useLocation();
+  useEffect(() => {
+    if (isDemo() && !isDemoPath(pathname)) exitDemo();
+  }, [pathname]);
+  return null;
+}
+
 export default function App() {
   return (
     <div className="w-full min-w-0 flex-1">
       <BrowserRouter>
+      <DemoGuard />
       <Routes>
+        <Route path="/demo" element={<DemoEntry />} />
+        <Route path="/tour" element={<DemoEntry />} />
         <Route path="/" element={<Landing />} />
         <Route path="/merchants" element={<Merchants />} />
         <Route path="/login" element={<Login />} />

@@ -8,6 +8,8 @@ import { createClient } from '@/lib/supabase/client'
 import { MerchantStatusProvider } from '@/lib/merchantStatus'
 import { isKioskMode, exitKioskMode, KIOSK_EVENT } from '@/lib/kioskMode'
 import { DashboardTour, shouldStartDashboardTour } from '@/components/DashboardTour'
+import { DemoBar, DemoTour } from '@/components/DemoTour'
+import { isDemo, exitDemo, demoTourPending, endDemoTour } from '@/lib/demo/mode'
 
 const NAV_ITEMS = [
   { to: '/dashboard',     icon: LayoutDashboard, label: 'Dashboard' },
@@ -41,27 +43,37 @@ export default function DashboardLayout() {
   const navigate = useNavigate()
   const location = useLocation()
 
+  // Public demo (/demo): a made-up shop, its own tour, no settings or setup
+  const demo = isDemo()
+  const [demoTour, setDemoTour] = useState(() => isDemo() && demoTourPending())
+  const closeDemoTour = () => { endDemoTour(); setDemoTour(false) }
+  useEffect(() => {
+    if (demo && (location.pathname.startsWith('/settings') || location.pathname.startsWith('/onboarding'))) {
+      navigate('/dashboard', { replace: true })
+    }
+  }, [demo, location.pathname, navigate])
+
   // Guided tour: fires once when the merchant lands on the dashboard after
   // onboarding. Checked on every navigation (not just mount) because the
   // onboarding screen shares this layout — the layout never remounts when
   // "Go to Dashboard" is clicked, so a mount-only check would never see the
   // pending flag that the button just set.
   useEffect(() => {
-    if (location.pathname !== '/dashboard') return
+    if (location.pathname !== '/dashboard' || isDemo()) return
     if (!shouldStartDashboardTour()) return
     const t = setTimeout(() => setTourOpen(true), 600)
     return () => clearTimeout(t)
   }, [location.pathname])
 
   // Counter mode: this device is locked to the Stamp page (see lib/kioskMode)
-  const [kiosk, setKiosk] = useState(() => isKioskMode())
+  const [kiosk, setKiosk] = useState(() => isKioskMode() && !isDemo())
   const [exitOpen, setExitOpen] = useState(false)
   const [exitPw, setExitPw] = useState('')
   const [exitErr, setExitErr] = useState('')
   const [exitLoading, setExitLoading] = useState(false)
 
   useEffect(() => {
-    const sync = () => setKiosk(isKioskMode())
+    const sync = () => setKiosk(isKioskMode() && !isDemo())
     window.addEventListener(KIOSK_EVENT, sync)
     return () => window.removeEventListener(KIOSK_EVENT, sync)
   }, [])
@@ -144,6 +156,11 @@ export default function DashboardLayout() {
   }, [])
 
   async function handleSignOut() {
+    if (isDemo()) {
+      exitDemo()
+      navigate('/merchants')
+      return
+    }
     await createClient().auth.signOut()
     navigate('/login')
   }
@@ -237,7 +254,9 @@ export default function DashboardLayout() {
   }
 
   return (
-    <div className="flex h-dvh w-full overflow-hidden bg-white">
+    <div className="flex h-dvh w-full flex-col overflow-hidden bg-white">
+      {demo && <DemoBar onTour={() => setDemoTour(true)} />}
+      <div className="relative flex flex-1 min-h-0 w-full overflow-hidden">
       {/* Mobile overlay */}
       {mobileOpen && (
         <div
@@ -309,7 +328,7 @@ export default function DashboardLayout() {
           <div className="my-3 border-t border-gray-200" />
 
           <ul className="space-y-0.5">
-            {NAV_ITEMS.filter((i) => i.to !== '/stamp' && (i.to !== '/gift-cards' || giftCardsEnabled)).map((item) => {
+            {NAV_ITEMS.filter((i) => i.to !== '/stamp' && (i.to !== '/gift-cards' || giftCardsEnabled) && !(demo && i.to === '/settings')).map((item) => {
               const lockedBySetup = !setupComplete
               const lockedByApproval = setupComplete && 'requiresApproval' in item && item.requiresApproval && !isActive
               const locked = lockedBySetup || lockedByApproval
@@ -378,7 +397,7 @@ export default function DashboardLayout() {
             })}
           </ul>
 
-          <div className="mt-3 pt-3 border-t border-gray-200">
+          {!demo && <div className="mt-3 pt-3 border-t border-gray-200">
             <NavLink
               to="/onboarding"
               onClick={() => setMobileOpen(false)}
@@ -397,7 +416,7 @@ export default function DashboardLayout() {
                 </>
               )}
             </NavLink>
-          </div>
+          </div>}
         </nav>
 
         {/* Footer */}
@@ -407,7 +426,7 @@ export default function DashboardLayout() {
             className="flex w-full items-center gap-2.5 rounded-md px-2.5 py-[7px] text-[13px] font-medium text-gray-500 hover:text-red-600 hover:bg-red-100/60 transition-colors"
           >
             <LogOut size={16} strokeWidth={1.75} />
-            Sign Out
+            {demo ? 'Exit demo' : 'Sign Out'}
           </button>
         </div>
       </aside>
@@ -441,15 +460,17 @@ export default function DashboardLayout() {
 
         {/* Content */}
         <main className="flex-1 overflow-y-auto">
-          <div className="px-4 lg:px-8 py-6 lg:py-8">
+          <div className={`px-4 lg:px-8 py-6 lg:py-8 ${demo && demoTour ? 'pb-72 sm:pb-8' : ''}`}>
             <MerchantStatusProvider isActive={isActive} loading={statusLoading}>
               <Outlet />
             </MerchantStatusProvider>
           </div>
         </main>
       </div>
+      </div>
 
       {tourOpen && <DashboardTour onClose={() => setTourOpen(false)} />}
+      {demo && demoTour && <DemoTour onClose={closeDemoTour} />}
     </div>
   )
 }
